@@ -106,7 +106,7 @@ tbody tr:hover{background:var(--card2)}
 .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .form-grid .full{grid-column:1/-1}
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,20,.7);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
-.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:24px}
 .modal:not(.no-anim){animation:pop .18s ease}
 @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
 .modal h3{font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
@@ -329,14 +329,14 @@ tbody tr:hover{background:var(--card2)}
 
 <script>
 /* ============================================================
-   TATAME BJJ v3.1 - Sistema de Gestão para Academia de Jiu-Jitsu
+   TATAME BJJ v3.3 - Sistema de Gestão para Academia de Jiu-Jitsu
    Perfis: ADM, Professor Líder, Professor e Aluno (com dependentes)
-   Camada de dados: localStorage via objeto DB (v5)
+   Camada de dados: localStorage via objeto DB (v7)
    ============================================================ */
 
-const DB_KEY = 'tatame_bjj_db_v5';
-const SESSION_KEY = 'tatame_bjj_session_v5';
-const DB_VERSION = 5;
+const DB_KEY = 'tatame_bjj_db_v7';
+const SESSION_KEY = 'tatame_bjj_session_v7';
+const DB_VERSION = 7;
 
 const DB = {
   get(key){
@@ -413,7 +413,8 @@ const DB = {
         {id:'m4', alunoId:'a5', mes:'2026-09', valor:150, status:'aberto'},
         {id:'m5', alunoId:'a6', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*1)},
         {id:'m6', alunoId:'a5', mes:'2026-10', valor:150, status:'isento'},
-        {id:'m7', alunoId:'a6', mes:'2026-10', valor:150, status:'aberto'}
+        {id:'m7', alunoId:'a6', mes:'2026-10', valor:150, status:'aberto'},
+        {id:'m8', alunoId:'a4', mes:'2026-08', valor:150, status:'aberto'}
       ],
       produtos:[
         {id:'prd1', nome:'Kimono Tatame Pro', desc:'Kimono premium 5 oz', preco:349.90, estoque:12, foto:'', ativo:true},
@@ -423,7 +424,8 @@ const DB = {
       ],
       pedidos:[
         {id:'ped1', alunoId:'a1', itens:[{produtoId:'prd1', qtd:1, preco:349.90}], total:349.90, status:'entregue', data:iso(now - 86400000*10)},
-        {id:'ped2', alunoId:'a1', itens:[{produtoId:'prd2', qtd:2, preco:89.90}], total:179.80, status:'enviado', data:iso(now - 86400000*2)}
+        {id:'ped2', alunoId:'a1', itens:[{produtoId:'prd2', qtd:2, preco:89.90}], total:179.80, status:'enviado', data:iso(now - 86400000*2)},
+        {id:'ped3', alunoId:'a4', itens:[{produtoId:'prd3', qtd:1, preco:129.90}], total:129.90, status:'pendente', data:iso(now - 86400000*8)}
       ],
       rifas:[
         {id:'r1', titulo:'Rifa - Kimono Pro', preco: 10, totalBilhetes:100, status:'ativa', premio:'Kimono Tatame Pro', dataSorteio:null, vencedor:null, criadoEm:iso(now - 86400000*5)},
@@ -433,7 +435,11 @@ const DB = {
         {id:'b1', rifaId:'r1', numero:7, alunoId:null, pago:false},
         {id:'b2', rifaId:'r1', numero:15, alunoId:'a1', pago:true},
         {id:'b3', rifaId:'r1', numero:22, alunoId:'a1', pago:true},
+        {id:'b4', rifaId:'r1', numero:30, alunoId:'a5', pago:false},
         {id:'b10', rifaId:'r2', numero:10, alunoId:'a4', pago:true}
+      ],
+      cobrancas:[
+        {id:'cb1', alunoId:'a4', descricao:'Taxa de exame de faixa', valor:50, status:'aberto', vencimento:iso(now - 86400000*5), criadoEm:iso(now - 86400000*5)}
       ],
       parceiros:[
         {id:'par1', nome:'NutriFit', categoria:'Nutrição', tipo:'sponsor', contato:'contato@nutrifit.com', logo:'', desc:'Suplementos com 20% de desconto para alunos'},
@@ -485,6 +491,11 @@ const fmtData = (isoStr)=>{
 };
 const DIA_NOME = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const DIA_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function ultimoDiaDoMes(mes){
+  const [y,m] = String(mes).split('-').map(Number);
+  if(!y||!m) return mes;
+  return new Date(y, m, 0).toISOString().slice(0,10);
+}
 
 /* Máscara de celular (RF-01): (XX) XXXXX-XXXX, 11 dígitos, somente celular */
 function maskCelular(value){
@@ -555,7 +566,8 @@ function icon(name, size){
     eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
     award:'<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>',
     gift:'<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
-    refresh:'<path d="M23 4v6a1 1 0 0 1-1 1h-6"/><path d="M1 20v-6a1 1 0 0 1 1-1h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>'
+    refresh:'<path d="M23 4v6a1 1 0 0 1-1 1h-6"/><path d="M1 20v-6a1 1 0 0 1 1-1h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+    copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
   };
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="'+(size||18)+'" height="'+(size||18)+'">'+ (paths[name]||paths.info) +'</svg>';
 }
@@ -813,6 +825,107 @@ function openModal(html){
 function closeModal(){ const b=document.getElementById('modalBackdrop'); if(b) b.remove(); }
 
 /* ============================================================
+   FINANCEIRO - cobranças unificadas + Pix (definido antes do notif)
+   ============================================================ */
+function todasCobrancas(){
+  const alunos = DB.get('alunos')||[];
+  const mensalidades = DB.get('mensalidades')||[];
+  const pedidos = DB.get('pedidos')||[];
+  const bilhetes = DB.get('bilhetes')||[];
+  const rifas = DB.get('rifas')||[];
+  const cobrancas = DB.get('cobrancas')||[];
+  const lista = [];
+  mensalidades.forEach(m=>{
+    const a = alunos.find(x=>x.id===m.alunoId);
+    lista.push({
+      id:'m_'+m.id, tipo:'mensalidade', alunoId:m.alunoId, aluno:a?a.nome:'-',
+      descricao:'Mensalidade '+m.mes, valor:m.valor, status:m.status,
+      referencia:m.mes, vencimento:ultimoDiaDoMes(m.mes)
+    });
+  });
+  pedidos.forEach(p=>{
+    const a = alunos.find(x=>x.id===p.alunoId);
+    const pago = p.status==='pago'||p.status==='entregue'||p.status==='enviado';
+    lista.push({
+      id:'p_'+p.id, tipo:'loja', alunoId:p.alunoId, aluno:a?a.nome:'-',
+      descricao:'Compra na loja #'+String(p.id).slice(-5).toUpperCase(), valor:p.total,
+      status: pago?'pago':'aberto', referencia:p.data, vencimento:p.data
+    });
+  });
+  bilhetes.filter(b=>b.alunoId).forEach(b=>{
+    const r = rifas.find(x=>x.id===b.rifaId);
+    const a = alunos.find(x=>x.id===b.alunoId);
+    if(r) lista.push({
+      id:'b_'+b.id, tipo:'rifa', alunoId:b.alunoId, aluno:a?a.nome:'-',
+      descricao:'Cota rifa '+r.titulo+' (nº '+b.numero+')', valor:r.preco,
+      status: b.pago?'pago':'aberto', referencia:r.criadoEm, vencimento:r.criadoEm
+    });
+  });
+  cobrancas.forEach(c=>{
+    const a = alunos.find(x=>x.id===c.alunoId);
+    lista.push({
+      id:'c_'+c.id, tipo:'avulsa', alunoId:c.alunoId, aluno:a?a.nome:'-',
+      descricao:c.descricao, valor:c.valor, status:c.status,
+      referencia:c.vencimento, vencimento:c.vencimento
+    });
+  });
+  return lista;
+}
+function statusCobranca(c){
+  if(c.status==='pago') return {key:'pago', label:'Pago', cls:'tag-ok'};
+  if(c.status==='isento') return {key:'isento', label:'Isento', cls:'tag-gold'};
+  const hoje = hojeISO();
+  const mesAtual = hoje.slice(0,7);
+  if(c.tipo==='mensalidade'){
+    if(c.referencia > mesAtual) return {key:'avencer', label:'À vencer', cls:'tag-blue'};
+    if(c.referencia === mesAtual) return {key:'pendente', label:'Pendente', cls:'tag-warn'};
+    return {key:'vencido', label:'Vencido', cls:'tag-danger'};
+  }
+  if(c.tipo==='avulsa'){
+    const venc = c.vencimento||'';
+    if(!venc) return {key:'pendente', label:'Pendente', cls:'tag-warn'};
+    if(venc > hoje) return {key:'avencer', label:'À vencer', cls:'tag-blue'};
+    if(venc === hoje) return {key:'pendente', label:'Pendente', cls:'tag-warn'};
+    return {key:'vencido', label:'Vencido', cls:'tag-danger'};
+  }
+  return {key:'pendente', label:'Pendente', cls:'tag-warn'};
+}
+function cobrancaVencida(c){ return statusCobranca(c).key==='vencido'; }
+
+/* ============ PIX (copiar em todos os fluxos de pagamento) ============ */
+function pixBar(){
+  const chave = (DB.get('config')||{}).pixKey||'';
+  if(!chave) return '';
+  return '<div class="pix-box">'+icon('financeiro',16)+'<span style="flex:1"><b>Pagamento via Pix:</b> '+esc(chave)+'</span><button class="btn btn-gold btn-sm" onclick="copiarPix()">'+icon('copy',13)+' Copiar chave</button></div>';
+}
+function copiarPix(){
+  const chave = (DB.get('config')||{}).pixKey||'';
+  if(!chave){ toast('Chave Pix não cadastrada.','warn'); return; }
+  const ok = ()=>toast('Chave Pix copiada!','ok');
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(chave).then(ok).catch(()=>{ fallbackCopy(chave); ok(); }); }
+  else { fallbackCopy(chave); ok(); }
+}
+function fallbackCopy(t){
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  ta.remove();
+}
+
+/* ============ NOTIFICAÇÃO DE COBRANÇAS VENCIDAS ============ */
+function notifVencidas(alunoId){
+  let cobrancas = todasCobrancas();
+  if(alunoId) cobrancas = cobrancas.filter(c=>c.alunoId===alunoId);
+  const vencidas = cobrancas.filter(cobrancaVencida);
+  if(!vencidas.length) return '';
+  const total = vencidas.reduce((s,c)=>s+c.valor,0);
+  const rows = vencidas.slice(0,5).map(c=>'<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(233,69,96,.15);font-size:12px"><span>'+esc(c.aluno)+' - '+esc(c.descricao)+'</span><b>'+money(c.valor)+'</b></div>').join('');
+  const extra = vencidas.length>5 ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">+ '+(vencidas.length-5)+' outra(s)</div>' : '';
+  return '<div class="alert alert-danger" style="align-items:center">'+icon('warn')+'<div style="flex:1"><b>'+vencidas.length+' cobrança(s) vencida(s)</b> totalizando '+money(total)+'.<div style="margin-top:6px">'+rows+extra+'</div></div><button class="btn btn-gold btn-sm" onclick="go(\'financeiro\')">'+icon('financeiro',13)+' Ver Financeiro</button></div>';
+}
+
+/* ============================================================
    DASHBOARD EXECUTIVO - ADM / Professor Líder (estilo Power BI)
    ============================================================ */
 const dashFilter = { periodo:'30d', faixa:'todas', status:'todos' };
@@ -853,6 +966,8 @@ function renderDashboard(){
   const taxa = presencasF.length? Math.round(presentes/presencasF.length*100) : 0;
 
   let html = '<div class="dash">';
+
+  html += notifVencidas();
 
   html += '<div class="dash-toolbar">'
     +'<div class="filters">'
@@ -1162,7 +1277,8 @@ function renderDashboardAluno(){
   const avisos = DB.get('avisos')||[];
   const meusAvisos = avisos.filter(a=>!a.lidos.includes(al.id)).slice(0,3);
 
-  let html = '<div class="grid grid-3" style="margin-bottom:16px">';
+  let html = notifVencidas(al.id);
+  html += '<div class="grid grid-3" style="margin-bottom:16px">';
   html += '<div class="stat-card"><div class="label">Minha Faixa</div><div style="display:flex;align-items:center;gap:10px;margin-top:6px"><span class="belt-bar" style="width:26px;height:26px;background:'+f.hex+'"></span><div><div class="value" style="font-size:20px">'+esc(al.faixa)+'</div><div class="sub">'+f.graus+' grau(s)</div></div></div></div>';
   html += '<div class="stat-card"><div class="label">Turmas Hoje</div><div class="value">'+turmas.length+'</div><div class="sub">'+DIA_NOME[hoje]+'</div></div>';
   html += '<div class="stat-card"><div class="label">Avisos Novos</div><div class="value" style="color:var(--primary)">'+meusAvisos.length+'</div><div class="sub">Não lidos</div></div>';
@@ -1284,7 +1400,7 @@ function exportarAlunosCompletoCSV(){
     const ult = ms[0];
     const inad = ms.some(m=>m.status==='aberto');
     csv += a.nome+';'+(a.cpf||'')+';'+(a.email||'')+';'+(a.celular||'')+';'+(a.nascimento||'')+';'+(idadeDe(a.nascimento)!=null?idadeDe(a.nascimento):'')+';'+a.faixa+';'+a.graus+';'+(a.ativo?'Ativo':'Inativo')+';'+(ult?ult.valor:'')+';'+(inad?'Inadimplente':(ms.length?'Adimplente':'Sem mensalidade'))+';'+((a.dependentes||[]).length)+'\n';
-  });
+    });
   downloadCSV(csv, 'lista_alunos_'+hojeISO()+'.csv');
   toast('Lista de alunos exportada.','ok');
 }
@@ -1598,108 +1714,162 @@ function renderFinanceiro(){
   const s = Session.get();
   if(s.perfil==='Aluno') return renderFinanceiroAluno();
   if(s.perfil==='Professor'){ go('dashboard'); return; }
-  setTitle('Financeiro','Extrato unificado');
+  setTitle('Financeiro','Cobranças, mensalidades e Pix');
   const cfg = DB.get('config')||{};
-  const mensalidades = DB.get('mensalidades')||[];
-  const pedidos = DB.get('pedidos')||[];
-  const bilhetes = DB.get('bilhetes')||[];
-  const rifas = DB.get('rifas')||[];
-  const mesAtual = hojeISO().slice(0,7);
-  const totalAberto = mensalidades.filter(m=>m.status==='aberto').reduce((x,m)=>x+m.valor,0);
-  const totalPagoMes = mensalidades.filter(m=>m.mes===mesAtual && m.status==='pago').reduce((x,m)=>x+m.valor,0);
-  const totalVendas = pedidos.reduce((x,p)=>x+p.total,0);
-  const totalRifas = bilhetes.filter(b=>b.pago).reduce((x,b)=>{ const r=rifas.find(q=>q.id===b.rifaId); return x+(r?r.preco:0); },0);
+  const cobrancas = todasCobrancas();
+  const abertas = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento');
+  const totalAberto = abertas.reduce((x,c)=>x+c.valor,0);
+  const totalPagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(hojeISO().slice(0,7))).reduce((x,c)=>x+c.valor,0);
+  const vencidas = abertas.filter(c=>statusCobranca(c).key==='vencido').reduce((x,c)=>x+c.valor,0);
+  const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer').reduce((x,c)=>x+c.valor,0);
   let html = '';
-  html += '<div class="card"><h3>'+icon('financeiro')+'Chave Pix</h3><div class="row"><div class="field" style="max-width:420px"><label>Chave Pix (mensalidades, loja, rifas e taxas)</label><input id="pixChave" value="'+esc(cfg.pixKey||'')+'" placeholder="ex.: pix@academia.com.br"></div><div style="align-self:flex-end"><button class="btn btn-primary" onclick="salvarPix()">'+icon('check')+' Salvar chave</button></div></div></div>';
+  html += '<div class="card"><h3>'+icon('financeiro')+'Chave Pix</h3><div class="row"><div class="field" style="max-width:420px"><label>Chave Pix (recebe mensalidades, loja, rifas e cobranças)</label><input id="pixChave" value="'+esc(cfg.pixKey||'')+'" placeholder="ex.: pix@academia.com.br"></div><div style="align-self:flex-end"><button class="btn btn-primary" onclick="salvarPix()">'+icon('check')+' Salvar chave</button></div></div></div>';
   html += '<div class="grid grid-4">';
-  html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
+  html += statCard('Total em Aberto', money(totalAberto), 'warn', '#f39c12');
   html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
-  html += statCard('Vendas Loja', money(totalVendas), 'cart', '#3498db');
-  html += statCard('Cotas de Rifas', money(totalRifas), 'ticket', '#9b59b6');
+  html += statCard('Vencido', money(vencidas), 'danger', '#e94560');
+  html += statCard('À Vencer', money(avencer), 'calendar', '#3498db');
   html += '</div>';
-  html += '<div class="card"><h3>'+icon('financeiro')+'Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Referência</th><th>Valor</th><th>Status</th><th>Pago em</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
-  mensalidades.forEach(m=>{
-    const al = (DB.get('alunos')||[]).find(a=>a.id===m.alunoId);
-    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
-    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
-    html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td><td>'+fmtData(m.dataPag)+'</td>';
-    html += '<td style="text-align:right;white-space:nowrap">';
-    if(m.status==='aberto') html += '<button class="btn btn-ok btn-sm" onclick="marcarMensalidadePaga(\''+m.id+'\')">'+icon('check',13)+' Pagar</button> <button class="btn btn-ghost btn-sm" onclick="isentarMensalidade(\''+m.id+'\')">Isentar</button>';
-    else if(m.status==='isento') html += '<button class="btn btn-ok btn-sm" onclick="marcarMensalidadePaga(\''+m.id+'\')">'+icon('check',13)+' Pagar</button>';
-    else html += '<span style="color:var(--muted);font-size:12px">-</span>';
-    html += '</td></tr>';
-  });
-  html += '</tbody></table></div></div>';
-  html += '<div class="grid grid-2">';
-  html += '<div class="card"><h3>'+icon('cart')+'Compras da Loja</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Total</th><th>Status</th></tr></thead><tbody>';
-  pedidos.forEach(p=>{
-    const al = (DB.get('alunos')||[]).find(a=>a.id===p.alunoId);
-    html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+money(p.total)+'</td><td><span class="tag tag-blue">'+esc(p.status)+'</span></td></tr>';
-  });
-  html += '</tbody></table></div></div>';
-  html += '<div class="card"><h3>'+icon('ticket')+'Cotas de Rifas</h3><div class="table-wrap"><table><thead><tr><th>Rifa</th><th>Bilhetes</th><th>Valor</th></tr></thead><tbody>';
-  rifas.forEach(r=>{
-    const bs = bilhetes.filter(b=>b.rifaId===r.id && b.pago);
-    html += '<tr><td>'+esc(r.titulo)+'</td><td>'+bs.length+'</td><td>'+money(bs.length*r.preco)+'</td></tr>';
-  });
-  html += '</tbody></table></div></div>';
-  html += '</div>';
+  html += buildFinanceiroAlunos();
+  html += buildTodasCobrancas();
+  html += buildCobrancasAvulsas();
   document.getElementById('content').innerHTML = html;
 }
-function renderFinanceiroAluno(){
-  const al = alunoAtual();
-  setTitle('Meu Financeiro','Mensalidades, compras e rifas');
-  const mensalidades = (DB.get('mensalidades')||[]).filter(m=>m.alunoId===al.id);
-  const pedidos = (DB.get('pedidos')||[]).filter(p=>p.alunoId===al.id);
-  const bilhetes = DB.get('bilhetes')||[];
-  const rifas = DB.get('rifas')||[];
-  const meusBilhetes = bilhetes.filter(b=>b.pago && b.alunoId===al.id);
-  const totalAberto = mensalidades.filter(m=>m.status==='aberto').reduce((s,m)=>s+m.valor,0);
-  const totalPagoMes = mensalidades.filter(m=>m.mes===hojeISO().slice(0,7) && m.status==='pago').reduce((s,m)=>s+m.valor,0);
-  const totalCompras = pedidos.reduce((s,p)=>s+p.total,0);
-  const totalRifas = meusBilhetes.reduce((s,b)=>{ const r=rifas.find(x=>x.id===b.rifaId); return s+(r?r.preco:0); },0);
-  let html = pixBar();
-  html += '<div class="grid grid-4">';
-  html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
-  html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
-  html += statCard('Compras Loja', money(totalCompras), 'cart', '#3498db');
-  html += statCard('Cotas de Rifas', money(totalRifas), 'ticket', '#9b59b6');
-  html += '</div>';
-  html += '<div class="card"><h3>'+icon('financeiro')+'Minhas Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Referência</th><th>Valor</th><th>Status</th><th>Pago em</th></tr></thead><tbody>';
-  if(!mensalidades.length) html += '<tr><td colspan="4" style="text-align:center;color:var(--muted)">Nenhuma mensalidade.</td></tr>';
-  mensalidades.forEach(m=>{
-    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
-    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
-    html += '<tr><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td><td>'+fmtData(m.dataPag)+'</td></tr>';
+function buildFinanceiroAlunos(){
+  const alunos = DB.get('alunos')||[];
+  const cobrancas = todasCobrancas();
+  const mesAtual = hojeISO().slice(0,7);
+  let html = '<div class="card"><h3>'+icon('alunos')+'Cobranças por Aluno</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Mensalidade</th><th>Loja</th><th>Rifa</th><th>Avulsa</th><th>Total Aberto</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  alunos.filter(a=>a.ativo).forEach(a=>{
+    const cs = cobrancas.filter(c=>c.alunoId===a.id);
+    const mens = cs.filter(c=>c.tipo==='mensalidade' && c.status!=='pago' && c.status!=='isento');
+    const loja = cs.filter(c=>c.tipo==='loja' && c.status!=='pago');
+    const rifa = cs.filter(c=>c.tipo==='rifa' && c.status!=='pago');
+    const avu = cs.filter(c=>c.tipo==='avulsa' && c.status!=='pago');
+    const total = [...mens,...loja,...rifa,...avu].reduce((s,c)=>s+c.valor,0);
+    const mensAtual = cs.find(c=>c.tipo==='mensalidade' && c.referencia===mesAtual);
+    const st = mensAtual ? statusCobranca(mensAtual) : null;
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+      +'<td>'+(mensAtual?money(mensAtual.valor):'—')+'</td>'
+      +'<td>'+money(loja.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td>'+money(rifa.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td>'+money(avu.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td><b style="color:'+(total>0?'var(--danger)':'var(--ok)')+'">'+money(total)+'</b></td>'
+      +'<td>'+(st?'<span class="tag '+st.cls+'">'+st.label+'</span>':'<span style="color:var(--muted)">—</span>')+'</td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="verCobrancasAluno(\''+a.id+'\')">'+icon('eye',13)+' Ver</button></td></tr>';
   });
   html += '</tbody></table></div></div>';
-  html += '<div class="grid grid-2">';
-  html += '<div class="card"><h3>'+icon('cart')+'Minhas Compras</h3><div class="table-wrap"><table><thead><tr><th>Data</th><th>Total</th><th>Status</th></tr></thead><tbody>';
-  if(!pedidos.length) html += '<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma compra.</td></tr>';
-  pedidos.forEach(p=>html += '<tr><td>'+fmtData(p.data)+'</td><td>'+money(p.total)+'</td><td><span class="tag tag-blue">'+esc(p.status)+'</span></td></tr>');
-  html += '</tbody></table></div></div>';
-  html += '<div class="card"><h3>'+icon('ticket')+'Minhas Cotas de Rifa</h3><div class="table-wrap"><table><thead><tr><th>Rifa</th><th>Bilhetes</th><th>Valor</th></tr></thead><tbody>';
-  if(!meusBilhetes.length) html += '<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma cota.</td></tr>';
-  rifas.forEach(r=>{
-    const bs = meusBilhetes.filter(b=>b.rifaId===r.id);
-    if(bs.length) html += '<tr><td>'+esc(r.titulo)+'</td><td>'+bs.map(b=>b.numero).join(', ')+'</td><td>'+money(bs.length*r.preco)+'</td></tr>';
+  return html;
+}
+function buildTodasCobrancas(){
+  const cobrancas = todasCobrancas().sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||'')));
+  let html = '<div class="card"><h3>'+icon('financeiro')+'Todas as Cobranças</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Aluno</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Nenhuma cobrança registrada.</td></tr>';
+  cobrancas.forEach(c=>{
+    const st = statusCobranca(c);
+    const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+    html += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td>'+esc(c.aluno)+'</td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+' Status</button></td></tr>';
   });
   html += '</tbody></table></div></div>';
-  html += '</div>';
-  document.getElementById('content').innerHTML = html;
+  return html;
 }
-function marcarMensalidadePaga(id){
-  if(!isFull()) return;
-  const ms = DB.get('mensalidades')||[];
-  const m = ms.find(x=>x.id===id);
-  if(m){ m.status='pago'; m.dataPag=hojeISO(); DB.set('mensalidades', ms); toast('Mensalidade marcada como paga.','ok'); renderFinanceiro(); }
+function buildCobrancasAvulsas(){
+  const cobrancas = (DB.get('cobrancas')||[]).slice().sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||'')));
+  const alunos = DB.get('alunos')||[];
+  let html = '<div class="card"><h3>'+icon('plus')+'Cobranças Avulsas</h3>';
+  html += '<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="modalNovaCobranca()">'+icon('plus')+' Nova Cobrança Avulsa</button></div>';
+  html += '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhuma cobrança avulsa.</td></tr>';
+  cobrancas.forEach(c=>{
+    const a = alunos.find(x=>x.id===c.alunoId);
+    const st = statusCobranca(c);
+    html += '<tr><td>'+esc(a?a.nome:'-')+'</td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+'</button> <button class="btn btn-danger btn-sm" onclick="excluirCobranca(\''+c.id+'\')">'+icon('trash',13)+'</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
 }
-function isentarMensalidade(id){
+function modalNovaCobranca(){
+  const alunos = DB.get('alunos')||[];
+  openModal('<h3>Nova Cobrança Avulsa<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Aluno *</label><select id="cbAluno">'+alunos.filter(a=>a.ativo).map(a=>'<option value="'+a.id+'">'+esc(a.nome)+'</option>').join('')+'</select></div>'
+  +'<div class="field full"><label>Descrição *</label><input id="cbDesc" placeholder="Ex.: Taxa de exame, camiseta, inscrição..."></div>'
+  +'<div class="field"><label>Valor (R$) *</label><input id="cbValor" inputmode="decimal" placeholder="0,00"></div>'
+  +'<div class="field"><label>Vencimento</label><input type="date" id="cbVenc" value="'+hojeISO()+'"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarNovaCobranca()">Criar cobrança</button></div>');
+}
+function salvarNovaCobranca(){
+  const alunoId = document.getElementById('cbAluno').value;
+  const desc = document.getElementById('cbDesc').value.trim();
+  const valor = parseFloat(String(document.getElementById('cbValor').value).replace(',','.'))||0;
+  const venc = document.getElementById('cbVenc').value;
+  if(!desc){ toast('Informe a descrição.','warn'); return; }
+  if(valor<=0){ toast('Informe um valor válido.','warn'); return; }
+  const cobrancas = DB.get('cobrancas')||[];
+  cobrancas.push({id:uid(), alunoId, descricao:desc, valor, status:'aberto', vencimento:venc, criadoEm:hojeISO()});
+  DB.set('cobrancas', cobrancas);
+  toast('Cobrança avulsa criada.','ok');
+  closeModal(); renderFinanceiro();
+}
+function excluirCobranca(id){
   if(!isFull()) return;
-  if(!confirm('Isentar esta mensalidade?')) return;
-  const ms = DB.get('mensalidades')||[];
-  const m = ms.find(x=>x.id===id);
-  if(m){ m.status='isento'; m.dataPag=null; DB.set('mensalidades', ms); toast('Mensalidade isenta.','ok'); renderFinanceiro(); }
+  if(!confirm('Excluir esta cobrança?')) return;
+  DB.set('cobrancas', (DB.get('cobrancas')||[]).filter(c=>c.id!==id));
+  toast('Cobrança excluída.'); renderFinanceiro();
+}
+function modalEditarStatus(id){
+  const c = todasCobrancas().find(x=>x.id===id);
+  if(!c) return;
+  const st = statusCobranca(c);
+  openModal('<h3>Editar Status<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="alert alert-info">'+icon('info')+'<div><b>'+esc(c.descricao)+'</b><br>'+esc(c.aluno)+' • '+money(c.valor)+' • Status atual: <span class="tag '+st.cls+'">'+st.label+'</span></div></div>'
+  +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+  +'<button class="btn btn-ok" onclick="setStatusCobranca(\''+id+'\',\'pago\')">'+icon('check')+' Marcar como Pago</button>'
+  +'<button class="btn btn-ghost" onclick="setStatusCobranca(\''+id+'\',\'aberto\')">'+icon('warn')+' Marcar como Em aberto</button>'
+  +'</div>'
+  +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>');
+}
+function setStatusCobranca(id, novo){
+  if(!isFull()) return;
+  const [prefix, realId] = id.split('_');
+  if(prefix==='m'){
+    const ms = DB.get('mensalidades')||[];
+    const m = ms.find(x=>x.id===realId);
+    if(m){ m.status = novo==='pago'?'pago':'aberto'; if(novo==='pago') m.dataPag=hojeISO(); else m.dataPag=null; DB.set('mensalidades', ms); }
+  } else if(prefix==='p'){
+    const pedidos = DB.get('pedidos')||[];
+    const p = pedidos.find(x=>x.id===realId);
+    if(p){ p.status = novo==='pago'?'pago':'pendente'; DB.set('pedidos', pedidos); }
+  } else if(prefix==='b'){
+    const bilhetes = DB.get('bilhetes')||[];
+    const b = bilhetes.find(x=>x.id===realId);
+    if(b){ b.pago = novo==='pago'; DB.set('bilhetes', bilhetes); }
+  } else if(prefix==='c'){
+    const cob = DB.get('cobrancas')||[];
+    const c = cob.find(x=>x.id===realId);
+    if(c){ c.status = novo==='pago'?'pago':'aberto'; DB.set('cobrancas', cob); }
+  }
+  toast('Status atualizado.','ok');
+  closeModal(); renderFinanceiro();
+}
+function verCobrancasAluno(alunoId){
+  const a = (DB.get('alunos')||[]).find(x=>x.id===alunoId);
+  const cobrancas = todasCobrancas().filter(c=>c.alunoId===alunoId).sort((x,y)=>String(y.vencimento||'').localeCompare(String(x.vencimento||'')));
+  let rows = '';
+  if(!cobrancas.length) rows = '<p style="color:var(--muted);font-size:13px">Nenhuma cobrança para este aluno.</p>';
+  else{
+    rows = '<div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+    cobrancas.forEach(c=>{
+      const st = statusCobranca(c);
+      const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+      rows += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+      +'<td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="closeModal();modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+'</button></td></tr>';
+    });
+    rows += '</tbody></table></div>';
+  }
+  openModal('<h3>Cobranças de '+esc(a?a.nome:'-')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+rows+'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>');
 }
 function salvarPix(){
   const cfg = DB.get('config')||{};
@@ -1708,24 +1878,31 @@ function salvarPix(){
   toast('Chave Pix salva.','ok');
   renderFinanceiro();
 }
-function pixBar(){
-  const chave = (DB.get('config')||{}).pixKey||'';
-  if(!chave) return '';
-  return '<div class="pix-box">'+icon('financeiro',16)+'<span style="flex:1"><b>Pagamento via Pix:</b> '+esc(chave)+'</span><button class="btn btn-gold btn-sm" onclick="copiarPix()">'+icon('check',13)+' Copiar chave</button></div>';
-}
-function copiarPix(){
-  const chave = (DB.get('config')||{}).pixKey||'';
-  if(!chave){ toast('Chave Pix não cadastrada.','warn'); return; }
-  const ok = ()=>toast('Chave Pix copiada!','ok');
-  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(chave).then(ok).catch(()=>{ fallbackCopy(chave); ok(); }); }
-  else { fallbackCopy(chave); ok(); }
-}
-function fallbackCopy(t){
-  const ta = document.createElement('textarea');
-  ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
-  document.body.appendChild(ta); ta.select();
-  try{ document.execCommand('copy'); }catch(e){}
-  ta.remove();
+function renderFinanceiroAluno(){
+  const al = alunoAtual();
+  setTitle('Meu Financeiro','Mensalidades, compras, rifas e cobranças');
+  const cobrancas = todasCobrancas().filter(c=>c.alunoId===al.id);
+  const abertas = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento');
+  const totalAberto = abertas.reduce((s,c)=>s+c.valor,0);
+  const totalPagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(hojeISO().slice(0,7))).reduce((s,c)=>s+c.valor,0);
+  const vencidas = abertas.filter(c=>statusCobranca(c).key==='vencido').reduce((s,c)=>s+c.valor,0);
+  const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer').reduce((s,c)=>s+c.valor,0);
+  let html = pixBar();
+  html += '<div class="grid grid-4">';
+  html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
+  html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
+  html += statCard('Vencido', money(vencidas), 'danger', '#e94560');
+  html += statCard('À Vencer', money(avencer), 'calendar', '#3498db');
+  html += '</div>';
+  html += '<div class="card"><h3>'+icon('financeiro')+'Minhas Cobranças</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma cobrança.</td></tr>';
+  cobrancas.sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||''))).forEach(c=>{
+    const st = statusCobranca(c);
+    const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+    html += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  document.getElementById('content').innerHTML = html;
 }
 
 /* ============ TRILHA / GRADUAÇÃO (RF-09) ============ */
@@ -1816,7 +1993,7 @@ function renderTrilhaAluno(){
   const f = faixaInfo(al);
   const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data));
   const idade = idadeDe(al.nascimento);
-  const prox = proximaFaixa(al.faixa, idade);
+  const prox = proximidadeProjeto(al.faixa, idade);
   let html = '<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap">'
   +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+f.hex+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(al.faixa)+'</div><div style="color:var(--muted);font-size:13px">'+f.graus+' grau(s)</div></div>'
   +'<div style="color:var(--muted)">'+icon('trilha',26)+'</div>'
@@ -2382,7 +2559,7 @@ function renderConfig(){
   +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">'+icon('check')+' Salvar</button></div>'
   +'</div>'
   +'<div class="card"><h3>'+icon('info')+'Sobre o Sistema</h3>'
-  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.1 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
+  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.3 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
   +'<div style="margin-top:14px"><button class="btn btn-danger" onclick="resetDados()">'+icon('trash')+' Restaurar dados de demonstração</button></div>'
   +'</div>';
   document.getElementById('content').innerHTML = html;
