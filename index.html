@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tatame BJJ — Sistema de Gestão para Academia de Jiu-Jitsu</title>
+<title>Tatame BJJ - Sistema de Gestão para Academia de Jiu-Jitsu</title>
 <style>
 :root{
   --primary:#e94560; --secondary:#f9c80e; --bg:#1a1a2e; --card:#16213e;
@@ -61,6 +61,8 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-wei
 .grid-4{grid-template-columns:repeat(4,1fr)}
 .row{display:flex;gap:12px;flex-wrap:wrap}
 .row .field{flex:1;min-width:180px}
+.toolbar-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.toolbar-row .field{min-width:160px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9px;font-size:14px;font-weight:600;transition:all .15s;border:1px solid transparent}
 .btn svg{width:16px;height:16px}
 .btn-primary{background:var(--primary);color:#fff}
@@ -192,6 +194,10 @@ tbody tr:hover{background:var(--card2)}
 .color-input input[type=color]{width:40px;height:34px;border:none;padding:0;background:none;cursor:pointer}
 .color-input span{font-size:13px;color:var(--muted)}
 
+.pix-box{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px dashed var(--secondary);border-radius:10px;padding:12px 14px;font-size:13px;margin-bottom:16px;flex-wrap:wrap}
+.freq-track{height:8px;background:var(--card2);border-radius:4px;overflow:hidden}
+.freq-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ok),var(--secondary))}
+
 /* ===== DASHBOARD EXECUTIVO (Power BI) ===== */
 .dash{display:flex;flex-direction:column;gap:18px}
 .dash-toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
@@ -275,9 +281,10 @@ tbody tr:hover{background:var(--card2)}
     <div id="loginError"></div>
     <div class="login-hint">
       <b>Contas de demonstração:</b><br>
-      ADM — admin / 123456<br>
-      Professor — professor / 123456<br>
-      Aluno — aluno / 123456 (João Silva)
+      ADM - admin / 123456<br>
+      Professor Líder - lider / 123456<br>
+      Professor - professor / 123456<br>
+      Aluno - aluno / 123456 (João Silva)
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="resetarDemo()">Restaurar dados de demonstração</button>
   </div>
@@ -322,13 +329,14 @@ tbody tr:hover{background:var(--card2)}
 
 <script>
 /* ============================================================
-   TATAME BJJ v3.0 — Sistema de Gestão para Academia de Jiu-Jitsu
-   Camada de dados: localStorage via objeto DB (v4 — re-semeadura)
+   TATAME BJJ v3.1 - Sistema de Gestão para Academia de Jiu-Jitsu
+   Perfis: ADM, Professor Líder, Professor e Aluno (com dependentes)
+   Camada de dados: localStorage via objeto DB (v5)
    ============================================================ */
 
-const DB_KEY = 'tatame_bjj_db_v4';
-const SESSION_KEY = 'tatame_bjj_session_v4';
-const DB_VERSION = 4;
+const DB_KEY = 'tatame_bjj_db_v5';
+const SESSION_KEY = 'tatame_bjj_session_v5';
+const DB_VERSION = 5;
 
 const DB = {
   get(key){
@@ -356,12 +364,14 @@ const DB = {
       _v: DB_VERSION,
       config:{
         academyName:'Tatame BJJ', tagline:'SISTEMA DE GESTÃO',
-        primary:'#e94560', secondary:'#f9c80e', subdomain:'tatame'
+        primary:'#e94560', secondary:'#f9c80e', subdomain:'tatame',
+        pixKey:'pix@tatamebjj.com.br'
       },
       users:[
         {id:'u1', login:'admin', nome:'Administrador', senha:'123456', perfil:'ADM', email:'admin@tatame.com', foto:''},
         {id:'u2', login:'professor', nome:'Carlos Mendes', senha:'123456', perfil:'Professor', email:'carlos@tatame.com', foto:''},
-        {id:'u3', login:'aluno', nome:'João Silva', senha:'123456', perfil:'Aluno', cpf:'12345678901', email:'joao@email.com', foto:'', alunoId:'a1'}
+        {id:'u3', login:'aluno', nome:'João Silva', senha:'123456', perfil:'Aluno', cpf:'12345678901', email:'joao@email.com', foto:'', alunoId:'a1'},
+        {id:'u4', login:'lider', nome:'Ricardo Almeida', senha:'123456', perfil:'Professor Líder', email:'lider@tatame.com', foto:''}
       ],
       alunos:[
         {id:'a1', nome:'João Silva', cpf:'12345678901', email:'joao@email.com', celular:'(21) 98765-4321', nascimento:'2000-05-14', faixa:'Azul', graus:2, ativo:true, foto:'', dependentes:['a2','a3'], nota:''},
@@ -401,7 +411,9 @@ const DB = {
         {id:'m2', alunoId:'a1', mes:'2026-10', valor:150, status:'aberto'},
         {id:'m3', alunoId:'a4', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*2)},
         {id:'m4', alunoId:'a5', mes:'2026-09', valor:150, status:'aberto'},
-        {id:'m5', alunoId:'a6', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*1)}
+        {id:'m5', alunoId:'a6', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*1)},
+        {id:'m6', alunoId:'a5', mes:'2026-10', valor:150, status:'isento'},
+        {id:'m7', alunoId:'a6', mes:'2026-10', valor:150, status:'aberto'}
       ],
       produtos:[
         {id:'prd1', nome:'Kimono Tatame Pro', desc:'Kimono premium 5 oz', preco:349.90, estoque:12, foto:'', ativo:true},
@@ -414,8 +426,8 @@ const DB = {
         {id:'ped2', alunoId:'a1', itens:[{produtoId:'prd2', qtd:2, preco:89.90}], total:179.80, status:'enviado', data:iso(now - 86400000*2)}
       ],
       rifas:[
-        {id:'r1', titulo:'Rifa — Kimono Pro', preco: 10, totalBilhetes:100, status:'ativa', premio:'Kimono Tatame Pro', dataSorteio:null, vencedor:null, criadoEm:iso(now - 86400000*5)},
-        {id:'r2', titulo:'Rifa — Faixa Oficial', preco: 5, totalBilhetes:50, status:'sorteada', premio:'Faixa Azul Oficial', dataSorteio:iso(now - 86400000*30), vencedor:'b10', criadoEm:iso(now - 86400000*40)}
+        {id:'r1', titulo:'Rifa - Kimono Pro', preco: 10, totalBilhetes:100, status:'ativa', premio:'Kimono Tatame Pro', dataSorteio:null, vencedor:null, criadoEm:iso(now - 86400000*5)},
+        {id:'r2', titulo:'Rifa - Faixa Oficial', preco: 5, totalBilhetes:50, status:'sorteada', premio:'Faixa Azul Oficial', dataSorteio:iso(now - 86400000*30), vencedor:'b10', criadoEm:iso(now - 86400000*40)}
       ],
       bilhetes:[
         {id:'b1', rifaId:'r1', numero:7, alunoId:null, pago:false},
@@ -466,7 +478,7 @@ const money = (v)=> 'R$ ' + Number(v||0).toFixed(2).replace('.', ',');
 const esc = (s)=> String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hojeISO = ()=> new Date().toISOString().slice(0,10);
 const fmtData = (isoStr)=>{
-  if(!isoStr) return '—';
+  if(!isoStr) return '-';
   const d = new Date(isoStr + (isoStr.length===10?'T00:00:00':''));
   if(isNaN(d)) return isoStr;
   return d.toLocaleDateString('pt-BR');
@@ -562,6 +574,7 @@ const FAIXAS_IBJJF = {
 };
 const FAIXAS_INFANTIS = ['Branca','Cinza','Amarela','Laranja','Verde'];
 const FAIXAS_ADULTAS = ['Azul','Roxa','Marrom','Preta'];
+const FAIXA_ORDEM = ['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
 function idadeDe(nascimento){
   if(!nascimento) return null;
   const n = new Date(nascimento + 'T00:00:00');
@@ -590,7 +603,7 @@ const MENU = {
       {id:'certificados',label:'Certificados',icon:'certificados'}
     ]},
     {g:'Comercial', itens:[
-      {id:'marketplace',label:'Marketplace',icon:'marketplace'},
+      {id:'marketplace',label:'Loja',icon:'marketplace'},
       {id:'parceiros',label:'Parceiros',icon:'parceiros'},
       {id:'avisos',label:'Avisos',icon:'avisos'},
       {id:'relatorios',label:'Relatórios',icon:'relatorios'}
@@ -605,18 +618,13 @@ const MENU = {
     {g:'Principal', itens:[{id:'dashboard',label:'Dashboard',icon:'dashboard'}]},
     {g:'Gestão', itens:[
       {id:'alunos',label:'Alunos',icon:'alunos'},
-      {id:'professores',label:'Professores',icon:'professores'},
       {id:'turmas',label:'Turmas e Horários',icon:'turmas'},
       {id:'presencas',label:'Presenças',icon:'presencas'},
       {id:'trilha',label:'Graduação',icon:'trilha'},
       {id:'certificados',label:'Certificados',icon:'certificados'}
     ]},
-    {g:'Comercial', itens:[
-      {id:'financeiro',label:'Financeiro',icon:'financeiro'},
-      {id:'marketplace',label:'Marketplace',icon:'marketplace'},
-      {id:'parceiros',label:'Parceiros',icon:'parceiros'},
-      {id:'avisos',label:'Avisos',icon:'avisos'},
-      {id:'relatorios',label:'Relatórios',icon:'relatorios'}
+    {g:'Comunicação', itens:[
+      {id:'avisos',label:'Avisos',icon:'avisos'}
     ]},
     {g:'Sistema', itens:[
       {id:'perfil',label:'Meu Perfil',icon:'perfil'}
@@ -628,7 +636,7 @@ const MENU = {
       {id:'financeiro',label:'Financeiro',icon:'financeiro'},
       {id:'trilha',label:'Minha Graduação',icon:'trilha'},
       {id:'certificados',label:'Meus Certificados',icon:'certificados'},
-      {id:'marketplace',label:'Marketplace',icon:'marketplace'}
+      {id:'marketplace',label:'Loja',icon:'marketplace'}
     ]},
     {g:'Comunidade', itens:[
       {id:'parceiros',label:'Parceiros',icon:'parceiros'},
@@ -639,10 +647,19 @@ const MENU = {
     ]}
   ]
 };
+MENU['Professor Líder'] = MENU.ADM;
 
 const current = { view:'dashboard', depId:null };
 
 function can(perfis){ return perfis.includes(Session.get().perfil); }
+function isFull(){
+  const p = Session.get().perfil;
+  return p==='ADM' || p==='Professor Líder';
+}
+function isStaff(){
+  const p = Session.get().perfil;
+  return p==='ADM' || p==='Professor Líder' || p==='Professor';
+}
 function renderNav(){
   const s = Session.get();
   if(!s) return;
@@ -736,7 +753,7 @@ function doLogin(){
   const err = document.getElementById('loginError');
   err.innerHTML='';
   let users = DB.get('users')||[];
-  if(!users.length || !users.some(x=>['admin','professor','aluno'].includes((x.login||'').toLowerCase()))){
+  if(!users.length || !users.some(x=>['admin','professor','aluno','lider'].includes((x.login||'').toLowerCase()))){
     DB.reset();
     users = DB.get('users')||[];
   }
@@ -796,14 +813,15 @@ function openModal(html){
 function closeModal(){ const b=document.getElementById('modalBackdrop'); if(b) b.remove(); }
 
 /* ============================================================
-   DASHBOARD EXECUTIVO — ADM / Professor (estilo Power BI)
+   DASHBOARD EXECUTIVO - ADM / Professor Líder (estilo Power BI)
    ============================================================ */
 const dashFilter = { periodo:'30d', faixa:'todas', status:'todos' };
 
 function renderDashboard(){
   const s = Session.get();
   if(s.perfil==='Aluno') return renderDashboardAluno();
-  setTitle(s.perfil==='ADM'?'Dashboard Executivo':'Dashboard do Professor','Análise gerencial em tempo real');
+  if(s.perfil==='Professor') return renderDashboardProfessor();
+  setTitle('Dashboard Executivo','Análise gerencial em tempo real');
 
   const alunos = DB.get('alunos')||[];
   const turmas = DB.get('turmas')||[];
@@ -884,6 +902,47 @@ function renderDashboard(){
     + rankingAlunos(alunosF, presencasF, mensalidadesF) +'</div>';
   html += '</div>';
 
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+/* ---------- DASHBOARD DO PROFESSOR (operacional, sem financeiro) ---------- */
+function renderDashboardProfessor(){
+  setTitle('Dashboard do Professor','Visão operacional');
+  const alunos = DB.get('alunos')||[];
+  const turmas = DB.get('turmas')||[];
+  const hoje = new Date().getDay();
+  const turmasHoje = turmas.filter(t=>t.dia===hoje);
+  const presencas = DB.get('presencas')||[];
+  const presHoje = presencas.filter(p=>p.data===hojeISO()&&p.presente).length;
+  const mensalidades = DB.get('mensalidades')||[];
+  const inad = alunos.filter(a=>mensalidades.some(m=>m.alunoId===a.id&&m.status==='aberto')).length;
+  let html = '<div class="grid grid-4">';
+  html += statCard('Alunos Ativos', alunos.filter(a=>a.ativo).length, 'alunos', '#3498db');
+  html += statCard('Turmas Hoje', turmasHoje.length, 'turmas', '#9b59b6');
+  html += statCard('Presenças Hoje', presHoje, 'presencas', '#2ecc71');
+  html += statCard('Inadimplentes', inad, 'warn', '#f39c12');
+  html += '</div>';
+  html += '<div class="grid grid-2">';
+  html += '<div class="card"><h3>'+icon('turmas')+'Turmas de Hoje ('+DIA_NOME[hoje]+')</h3>';
+  if(!turmasHoje.length){ html += '<p style="color:var(--muted);font-size:13px">Nenhuma turma hoje.</p>'; }
+  else{
+    html += '<div class="table-wrap"><table><thead><tr><th>Turma</th><th>Professor</th><th>Horário</th><th>Vagas</th></tr></thead><tbody>';
+    turmasHoje.forEach(t=>{
+      const prof = (DB.get('professores')||[]).find(p=>p.id===t.professor);
+      const ags = (DB.get('agendamentos')||[]).filter(a=>a.turmaId===t.id && a.data===hojeISO());
+      html += '<tr><td><b>'+esc(t.nome)+'</b></td><td>'+esc(prof?prof.nome:'-')+'</td><td>'+esc(t.hora)+'</td><td>'+ags.length+'/'+t.vagas+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  html += '<div class="card"><h3>'+icon('alunos')+'Situação dos Alunos</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Status</th><th>Adimplência</th></tr></thead><tbody>';
+  alunos.slice(0,8).forEach(a=>{
+    const f = faixaInfo(a);
+    const fin = situacaoFinanceira(a.id);
+    html += '<tr><td>'+esc(a.nome)+'</td><td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td><td><span class="tag '+(a.ativo?'tag-ok':'tag-danger')+'">'+(a.ativo?'Ativo':'Inativo')+'</span></td><td>'+(fin.tem?(fin.inad?'<span class="tag tag-danger">Inadimplente</span>':'<span class="tag tag-ok">Adimplente</span>'):'<span style="color:var(--muted)">-</span>')+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
   html += '</div>';
   document.getElementById('content').innerHTML = html;
 }
@@ -989,16 +1048,16 @@ function receitaTable(mensalidades, pedidos, bilhetes, rifas, alunos){
   const linhas=[];
   mensalidades.forEach(m=>{
     const a=alunos.find(x=>x.id===m.alunoId);
-    linhas.push({origem:'Mensalidade', ref:m.mes, aluno:a?a.nome:'—', valor:m.valor, status:m.status});
+    linhas.push({origem:'Mensalidade', ref:m.mes, aluno:a?a.nome:'-', valor:m.valor, status:m.status});
   });
   pedidos.forEach(p=>{
     const a=alunos.find(x=>x.id===p.alunoId);
-    linhas.push({origem:'Loja', ref:fmtData(p.data), aluno:a?a.nome:'—', valor:p.total, status:p.status});
+    linhas.push({origem:'Loja', ref:fmtData(p.data), aluno:a?a.nome:'-', valor:p.total, status:p.status});
   });
   bilhetes.filter(b=>b.pago).forEach(b=>{
     const r=rifas.find(x=>x.id===b.rifaId);
     const a=alunos.find(x=>x.id===b.alunoId);
-    if(r) linhas.push({origem:'Rifa', ref:r.titulo, aluno:a?a.nome:'—', valor:r.preco, status:'pago'});
+    if(r) linhas.push({origem:'Rifa', ref:r.titulo, aluno:a?a.nome:'-', valor:r.preco, status:'pago'});
   });
   linhas.sort((a,b)=>String(b.ref).localeCompare(String(a.ref)));
   const top=linhas.slice(0,8);
@@ -1115,7 +1174,7 @@ function renderDashboardAluno(){
   else{
     html += '<div class="timeline">';
     trilha.forEach(t=>{
-      const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' → '+t.para : 'Grau '+t.de+' → '+t.para;
+      const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
       html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
     });
     html += '</div>';
@@ -1132,7 +1191,7 @@ function renderDashboardAluno(){
       const lotada = agsTurma.length>=t.vagas;
       html += '<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--card2)">';
       html += '<span class="belt-bar" style="width:10px;height:40px;border-radius:3px;background:'+(t.cor||'#e94560')+'"></span>';
-      html += '<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(prof?prof.nome:'—')+' • '+esc(t.hora)+' • '+agsTurma.length+'/'+t.vagas+' vagas</div></div>';
+      html += '<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(prof?prof.nome:'-')+' • '+esc(t.hora)+' • '+agsTurma.length+'/'+t.vagas+' vagas</div></div>';
       if(meuAg){
         html += '<button class="btn btn-ok btn-sm" onclick="cancelarAgendamento(\''+meuAg.id+'\')">'+icon('check')+' Agendado</button>';
       } else if(lotada){
@@ -1178,30 +1237,56 @@ function cancelarAgendamento(agId){
 }
 
 /* ============ ALUNOS (CRM) ============ */
+function situacaoFinanceira(alunoId){
+  const ms=(DB.get('mensalidades')||[]).filter(m=>m.alunoId===alunoId).sort((a,b)=>b.mes.localeCompare(a.mes));
+  const ult=ms[0];
+  const inad=ms.some(m=>m.status==='aberto');
+  return {valor: ult?ult.valor:150, inad, tem: ms.length>0};
+}
 function renderAlunos(){
-  if(!can(['ADM','Professor'])) return;
+  if(!isStaff()) return;
   setTitle('Gestão de Alunos','Cadastro, edição e exclusão');
   const alunos = DB.get('alunos')||[];
   const q = (document.getElementById('search')||{}).value||'';
   const filtrados = alunos.filter(a=>a.nome.toLowerCase().includes(q.toLowerCase()) || (a.cpf||'').includes(q));
   let html = '<div class="row" style="margin-bottom:16px">';
   html += '<div class="field" style="max-width:320px"><label>'+icon('search',13)+' Buscar</label><input id="search" placeholder="Nome ou CPF" value="'+esc(q)+'" oninput="renderAlunos()"></div>';
-  html += '<div style="align-self:flex-end;margin-left:auto"><button class="btn btn-primary" onclick="modalAluno()">'+icon('plus')+' Novo Aluno</button></div>';
-  html += '</div>';
-  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>CPF</th><th>Celular</th><th>Faixa</th><th>Dependentes</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  html += '<div style="align-self:flex-end;margin-left:auto;display:flex;gap:10px">';
+  if(isFull()) html += '<button class="btn btn-gold" onclick="exportarAlunosCompletoCSV()">'+icon('download')+' Baixar lista de alunos</button>';
+  html += '<button class="btn btn-primary" onclick="modalAluno()">'+icon('plus')+' Novo Aluno</button>';
+  html += '</div></div>';
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>CPF</th><th>Celular</th><th>Faixa</th><th>Mensalidade</th><th>Adimplência</th><th>Dependentes</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
   filtrados.forEach(a=>{
     const f = faixaInfo(a);
     const ntdep = (a.dependentes||[]).length;
-    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<div><b>'+esc(a.nome)+'</b><div style="font-size:11px;color:var(--muted)">'+esc(a.email||'—')+'</div></div></div></td>';
-    html += '<td>'+esc(a.cpf?maskCPF(a.cpf):'—')+'</td><td>'+esc(a.celular||'—')+'</td>';
+    const fin = situacaoFinanceira(a.id);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<div><b>'+esc(a.nome)+'</b><div style="font-size:11px;color:var(--muted)">'+esc(a.email||'-')+'</div></div></div></td>';
+    html += '<td>'+esc(a.cpf?maskCPF(a.cpf):'-')+'</td><td>'+esc(a.celular||'-')+'</td>';
     html += '<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>';
-    html += '<td>'+(ntdep? '<span class="tag tag-gold">'+ntdep+'</span>' : '<span style="color:var(--muted)">—</span>')+'</td>';
+    html += '<td>'+money(fin.valor)+'</td>';
+    html += '<td>'+(fin.tem?(fin.inad?'<span class="tag tag-danger">Inadimplente</span>':'<span class="tag tag-ok">Adimplente</span>'):'<span style="color:var(--muted)">-</span>')+'</td>';
+    html += '<td>'+(ntdep? '<span class="tag tag-gold">'+ntdep+'</span>' : '<span style="color:var(--muted)">-</span>')+'</td>';
     html += '<td><span class="tag '+(a.ativo?'tag-ok':'tag-danger')+'">'+(a.ativo?'Ativo':'Inativo')+'</span></td>';
-    html += '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalAluno(\''+a.id+'\')">'+icon('edit',14)+'</button> <button class="btn btn-danger btn-sm" onclick="excluirAluno(\''+a.id+'\')">'+icon('trash',14)+'</button></td></tr>';
+    html += '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalAluno(\''+a.id+'\')">'+icon('edit',14)+'</button>';
+    if(isFull()) html += ' <button class="btn btn-danger btn-sm" onclick="excluirAluno(\''+a.id+'\')">'+icon('trash',14)+'</button>';
+    html += '</td></tr>';
   });
-  if(!filtrados.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Nenhum aluno encontrado.</td></tr>';
+  if(!filtrados.length) html += '<tr><td colspan="9" style="text-align:center;color:var(--muted)">Nenhum aluno encontrado.</td></tr>';
   html += '</tbody></table></div></div>';
   document.getElementById('content').innerHTML = html;
+}
+function exportarAlunosCompletoCSV(){
+  const alunos = DB.get('alunos')||[];
+  const mensalidades = DB.get('mensalidades')||[];
+  let csv = 'Nome;CPF;Email;Celular;Nascimento;Idade;Faixa;Graus;Status;ValorMensalidade;Adimplencia;Dependentes\n';
+  alunos.forEach(a=>{
+    const ms = mensalidades.filter(m=>m.alunoId===a.id).sort((x,y)=>y.mes.localeCompare(x.mes));
+    const ult = ms[0];
+    const inad = ms.some(m=>m.status==='aberto');
+    csv += a.nome+';'+(a.cpf||'')+';'+(a.email||'')+';'+(a.celular||'')+';'+(a.nascimento||'')+';'+(idadeDe(a.nascimento)!=null?idadeDe(a.nascimento):'')+';'+a.faixa+';'+a.graus+';'+(a.ativo?'Ativo':'Inativo')+';'+(ult?ult.valor:'')+';'+(inad?'Inadimplente':(ms.length?'Adimplente':'Sem mensalidade'))+';'+((a.dependentes||[]).length)+'\n';
+  });
+  downloadCSV(csv, 'lista_alunos_'+hojeISO()+'.csv');
+  toast('Lista de alunos exportada.','ok');
 }
 function modalAluno(id){
   const alunos = DB.get('alunos')||[];
@@ -1284,6 +1369,7 @@ function salvarAluno(id){
   renderAlunos();
 }
 function excluirAluno(id){
+  if(!isFull()) return;
   if(!confirm('Excluir este aluno? Esta ação não pode ser desfeita.')) return;
   DB.set('alunos', (DB.get('alunos')||[]).filter(a=>a.id!==id));
   toast('Aluno excluído.');
@@ -1292,7 +1378,7 @@ function excluirAluno(id){
 
 /* ============ PROFESSORES ============ */
 function renderProfessores(){
-  if(!can(['ADM','Professor'])) return;
+  if(!isFull()) return;
   setTitle('Professores','Cadastro e especialidades');
   const profs = DB.get('professores')||[];
   let html = '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalProfessor()">'+icon('plus')+' Novo Professor</button></div>';
@@ -1301,7 +1387,7 @@ function renderProfessores(){
     html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
     +'<div class="avatar" style="width:48px;height:48px;font-size:18px">'+avHtml(p.foto,p.nome)+'</div>'
     +'<div><b>'+esc(p.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(p.especialidade||'')+'</div></div></div>'
-    +'<div style="font-size:13px;color:var(--muted);line-height:1.8">'+icon('users',13)+' '+esc(p.cref||'—')+'<br>'+icon('alunos',13)+' '+esc(p.celular||'—')+'<br>'+icon('perfil',13)+' '+esc(p.email||'—')+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.8">'+icon('users',13)+' '+esc(p.cref||'-')+'<br>'+icon('alunos',13)+' '+esc(p.celular||'-')+'<br>'+icon('perfil',13)+' '+esc(p.email||'-')+'</div>'
     +'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="modalProfessor(\''+p.id+'\')">'+icon('edit',14)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirProfessor(\''+p.id+'\')">'+icon('trash',14)+'</button></div></div>';
   });
   html += '</div>';
@@ -1339,6 +1425,7 @@ function salvarProfessor(id){
   closeModal(); renderProfessores();
 }
 function excluirProfessor(id){
+  if(!isFull()) return;
   if(!confirm('Excluir professor?')) return;
   DB.set('professores', (DB.get('professores')||[]).filter(p=>p.id!==id));
   toast('Professor excluído.'); renderProfessores();
@@ -1352,7 +1439,7 @@ function renderTurmas(){
   const ags = DB.get('agendamentos')||[];
   const hoje = hojeISO();
   let html = '';
-  if(can(['ADM','Professor'])) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalTurma()">'+icon('plus')+' Nova Turma</button></div>';
+  if(isStaff()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalTurma()">'+icon('plus')+' Nova Turma</button></div>';
   html += '<div class="grid grid-2">';
   turmas.forEach(t=>{
     const prof = profs.find(p=>p.id===t.professor);
@@ -1361,9 +1448,9 @@ function renderTurmas(){
     html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
     +'<span class="belt-bar" style="width:8px;height:44px;border-radius:4px;background:'+(t.cor||'#e94560')+'"></span>'
     +'<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+DIA_NOME[t.dia]+' • '+esc(t.hora)+' • '+t.duracao+'min</div></div>'
-    +(can(['ADM','Professor'])?'<button class="btn btn-ghost btn-sm" onclick="modalTurma(\''+t.id+'\')">'+icon('edit',14)+'</button>':'')
+    +(isStaff()?'<button class="btn btn-ghost btn-sm" onclick="modalTurma(\''+t.id+'\')">'+icon('edit',14)+'</button>':'')
     +'</div>'
-    +'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">Professor: '+esc(prof?prof.nome:'—')+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">Professor: '+esc(prof?prof.nome:'-')+'</div>'
     +'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Agendados hoje</span><span>'+agsHoje.length+'/'+t.vagas+'</span></div>'
     +'<div style="height:8px;background:var(--card2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(pct>=100?'var(--danger)':'var(--primary)')+'"></div></div>'
     +'</div>';
@@ -1398,15 +1485,28 @@ function salvarTurma(id){
 }
 
 /* ============ PRESENÇAS ============ */
+let presTab = 'chamada';
+let freqPeriodo = '30d';
+let freqTurma = 'todas';
 function renderPresencas(){
-  if(!can(['ADM','Professor'])) return;
-  setTitle('Presenças','Chamada em lista');
+  if(!isStaff()) return;
+  setTitle('Presenças','Chamada e frequência por aluno');
+  let html = '<div class="tabs">'
+  +'<button class="tab'+(presTab==='chamada'?' active':'')+'" onclick="presTab=\'chamada\';renderPresencas()">'+icon('calendar',15)+' Chamada do Dia</button>'
+  +'<button class="tab'+(presTab==='frequencia'?' active':'')+'" onclick="presTab=\'frequencia\';renderPresencas()">'+icon('presencas',15)+' Frequência por Aluno</button>'
+  +'</div><div id="presBody"></div>';
+  document.getElementById('content').innerHTML = html;
+  if(presTab==='chamada') renderChamadaBody(); else renderFrequenciaBody();
+}
+function renderChamadaBody(){
+  const body = document.getElementById('presBody');
   const turmas = DB.get('turmas')||[];
   const hoje = hojeISO();
-  let html = '<div class="card"><h3>'+icon('calendar')+'Chamada do Dia — '+fmtData(hoje)+'</h3>';
-  html += '<div class="row" style="margin-bottom:14px"><div class="field" style="max-width:300px"><label>Turma</label><select id="chamadaTurma" onchange="renderChamada()"><option value="">Selecione a turma</option>'+turmas.map(t=>'<option value="'+t.id+'">'+esc(t.nome)+' — '+DIA_NOME[t.dia]+' '+esc(t.hora)+'</option>').join('')+'</select></div></div>';
+  let html = '<div class="card"><h3>'+icon('calendar')+'Chamada do Dia - '+fmtData(hoje)+'</h3>';
+  html += '<div class="row" style="margin-bottom:14px"><div class="field" style="max-width:300px"><label>Turma</label><select id="chamadaTurma" onchange="renderChamada()"><option value="">Selecione a turma</option>'+turmas.map(t=>'<option value="'+t.id+'">'+esc(t.nome)+' - '+DIA_NOME[t.dia]+' '+esc(t.hora)+'</option>').join('')+'</select></div></div>';
   html += '<div id="chamadaBody"></div></div>';
-  document.getElementById('content').innerHTML = html;
+  body.innerHTML = html;
+  renderChamada();
 }
 function renderChamada(){
   const tid = document.getElementById('chamadaTurma').value;
@@ -1415,7 +1515,6 @@ function renderChamada(){
   const alunos = DB.get('alunos')||[];
   const presencas = DB.get('presencas')||[];
   const hoje = hojeISO();
-  const turma = (DB.get('turmas')||[]).find(t=>t.id===tid);
   const presosHoje = presencas.filter(p=>p.turmaId===tid && p.data===hoje);
   let html = '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Presente</th></tr></thead><tbody>';
   alunos.filter(a=>a.ativo).forEach(a=>{
@@ -1436,6 +1535,42 @@ function togglePresenca(alunoId, turmaId){
   else { presencas.push({id:uid(), alunoId, turmaId, data:hoje, presente:true}); }
   DB.set('presencas', presencas);
   renderChamada();
+}
+function renderFrequenciaBody(){
+  const body = document.getElementById('presBody');
+  const turmas = DB.get('turmas')||[];
+  const presencas = DB.get('presencas')||[];
+  const alunos = DB.get('alunos')||[];
+  const dias = freqPeriodo==='7d'?7 : freqPeriodo==='90d'?90 : (freqPeriodo==='todos'?9999:30);
+  const corte = freqPeriodo==='todos' ? '0000-01-01' : new Date(Date.now()-dias*86400000).toISOString().slice(0,10);
+  let html = '<div class="toolbar-row">'
+  +'<div class="field"><label>Período</label><select id="freqPeriodo" onchange="freqPeriodo=this.value;renderFrequenciaBody()">'
+  +'<option value="7d"'+(freqPeriodo==='7d'?' selected':'')+'>Últimos 7 dias</option>'
+  +'<option value="30d"'+(freqPeriodo==='30d'?' selected':'')+'>Últimos 30 dias</option>'
+  +'<option value="90d"'+(freqPeriodo==='90d'?' selected':'')+'>Últimos 90 dias</option>'
+  +'<option value="todos"'+(freqPeriodo==='todos'?' selected':'')+'>Todo o histórico</option>'
+  +'</select></div>'
+  +'<div class="field"><label>Turma</label><select id="freqTurma" onchange="freqTurma=this.value;renderFrequenciaBody()"><option value="todas"'+(freqTurma==='todas'?' selected':'')+'>Todas</option>'+turmas.map(t=>'<option value="'+t.id+'"'+(freqTurma===t.id?' selected':'')+'>'+esc(t.nome)+'</option>').join('')+'</select></div>'
+  +'</div>';
+  const regs = presencas.filter(p=>p.data>=corte && (freqTurma==='todas'||p.turmaId===freqTurma));
+  const linhas = alunos.filter(a=>a.ativo).map(a=>{
+    const r = regs.filter(p=>p.alunoId===a.id);
+    const pres = r.filter(p=>p.presente).length;
+    const faltas = r.length-pres;
+    const taxa = r.length?Math.round(pres/r.length*100):0;
+    return {a, pres, faltas, total:r.length, taxa};
+  }).filter(x=>x.total>0).sort((x,y)=>y.taxa-x.taxa||y.pres-x.pres);
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Presenças</th><th>Faltas</th><th>Total</th><th>Taxa</th></tr></thead><tbody>';
+  if(!linhas.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhuma frequência registrada no período.</td></tr>';
+  linhas.forEach(l=>{
+    const f = faixaInfo(l.a);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(l.a.foto,l.a.nome)+'<b>'+esc(l.a.nome)+'</b></div></td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(l.a.faixa)+'</span></td>'
+    +'<td>'+l.pres+'</td><td>'+l.faltas+'</td><td>'+l.total+'</td>'
+    +'<td style="min-width:160px"><div style="display:flex;align-items:center;gap:8px"><div class="freq-track" style="flex:1"><div class="freq-fill" style="width:'+l.taxa+'%"></div></div><b>'+l.taxa+'%</b></div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  body.innerHTML = html;
 }
 function exportarPresencas(turmaId){
   const alunos = DB.get('alunos')||[];
@@ -1462,33 +1597,44 @@ function downloadCSV(csv, nome){
 function renderFinanceiro(){
   const s = Session.get();
   if(s.perfil==='Aluno') return renderFinanceiroAluno();
+  if(s.perfil==='Professor'){ go('dashboard'); return; }
   setTitle('Financeiro','Extrato unificado');
+  const cfg = DB.get('config')||{};
   const mensalidades = DB.get('mensalidades')||[];
   const pedidos = DB.get('pedidos')||[];
   const bilhetes = DB.get('bilhetes')||[];
   const rifas = DB.get('rifas')||[];
   const mesAtual = hojeISO().slice(0,7);
-  const totalAberto = mensalidades.filter(m=>m.status==='aberto').reduce((s2,m)=>s2+m.valor,0);
-  const totalPagoMes = mensalidades.filter(m=>m.mes===mesAtual && m.status==='pago').reduce((s2,m)=>s2+m.valor,0);
-  const totalVendas = pedidos.reduce((s2,p)=>s2+p.total,0);
-  const totalRifas = bilhetes.filter(b=>b.pago).reduce((s2,b)=>{ const r=rifas.find(x=>x.id===b.rifaId); return s2+(r?r.preco:0); },0);
-  let html = '<div class="grid grid-4">';
+  const totalAberto = mensalidades.filter(m=>m.status==='aberto').reduce((x,m)=>x+m.valor,0);
+  const totalPagoMes = mensalidades.filter(m=>m.mes===mesAtual && m.status==='pago').reduce((x,m)=>x+m.valor,0);
+  const totalVendas = pedidos.reduce((x,p)=>x+p.total,0);
+  const totalRifas = bilhetes.filter(b=>b.pago).reduce((x,b)=>{ const r=rifas.find(q=>q.id===b.rifaId); return x+(r?r.preco:0); },0);
+  let html = '';
+  html += '<div class="card"><h3>'+icon('financeiro')+'Chave Pix</h3><div class="row"><div class="field" style="max-width:420px"><label>Chave Pix (mensalidades, loja, rifas e taxas)</label><input id="pixChave" value="'+esc(cfg.pixKey||'')+'" placeholder="ex.: pix@academia.com.br"></div><div style="align-self:flex-end"><button class="btn btn-primary" onclick="salvarPix()">'+icon('check')+' Salvar chave</button></div></div></div>';
+  html += '<div class="grid grid-4">';
   html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
   html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
   html += statCard('Vendas Loja', money(totalVendas), 'cart', '#3498db');
   html += statCard('Cotas de Rifas', money(totalRifas), 'ticket', '#9b59b6');
   html += '</div>';
-  html += '<div class="card"><h3>'+icon('financeiro')+'Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Referência</th><th>Valor</th><th>Status</th><th>Pago em</th></tr></thead><tbody>';
+  html += '<div class="card"><h3>'+icon('financeiro')+'Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Referência</th><th>Valor</th><th>Status</th><th>Pago em</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
   mensalidades.forEach(m=>{
     const al = (DB.get('alunos')||[]).find(a=>a.id===m.alunoId);
-    html += '<tr><td>'+esc(al?al.nome:'—')+'</td><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+(m.status==='pago'?'tag-ok':'tag-danger')+'">'+(m.status==='pago'?'Pago':'Em aberto')+'</span></td><td>'+fmtData(m.dataPag)+'</td></tr>';
+    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
+    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
+    html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td><td>'+fmtData(m.dataPag)+'</td>';
+    html += '<td style="text-align:right;white-space:nowrap">';
+    if(m.status==='aberto') html += '<button class="btn btn-ok btn-sm" onclick="marcarMensalidadePaga(\''+m.id+'\')">'+icon('check',13)+' Pagar</button> <button class="btn btn-ghost btn-sm" onclick="isentarMensalidade(\''+m.id+'\')">Isentar</button>';
+    else if(m.status==='isento') html += '<button class="btn btn-ok btn-sm" onclick="marcarMensalidadePaga(\''+m.id+'\')">'+icon('check',13)+' Pagar</button>';
+    else html += '<span style="color:var(--muted);font-size:12px">-</span>';
+    html += '</td></tr>';
   });
   html += '</tbody></table></div></div>';
   html += '<div class="grid grid-2">';
   html += '<div class="card"><h3>'+icon('cart')+'Compras da Loja</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Total</th><th>Status</th></tr></thead><tbody>';
   pedidos.forEach(p=>{
     const al = (DB.get('alunos')||[]).find(a=>a.id===p.alunoId);
-    html += '<tr><td>'+esc(al?al.nome:'—')+'</td><td>'+money(p.total)+'</td><td><span class="tag tag-blue">'+esc(p.status)+'</span></td></tr>';
+    html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+money(p.total)+'</td><td><span class="tag tag-blue">'+esc(p.status)+'</span></td></tr>';
   });
   html += '</tbody></table></div></div>';
   html += '<div class="card"><h3>'+icon('ticket')+'Cotas de Rifas</h3><div class="table-wrap"><table><thead><tr><th>Rifa</th><th>Bilhetes</th><th>Valor</th></tr></thead><tbody>';
@@ -1512,7 +1658,8 @@ function renderFinanceiroAluno(){
   const totalPagoMes = mensalidades.filter(m=>m.mes===hojeISO().slice(0,7) && m.status==='pago').reduce((s,m)=>s+m.valor,0);
   const totalCompras = pedidos.reduce((s,p)=>s+p.total,0);
   const totalRifas = meusBilhetes.reduce((s,b)=>{ const r=rifas.find(x=>x.id===b.rifaId); return s+(r?r.preco:0); },0);
-  let html = '<div class="grid grid-4">';
+  let html = pixBar();
+  html += '<div class="grid grid-4">';
   html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
   html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
   html += statCard('Compras Loja', money(totalCompras), 'cart', '#3498db');
@@ -1520,7 +1667,11 @@ function renderFinanceiroAluno(){
   html += '</div>';
   html += '<div class="card"><h3>'+icon('financeiro')+'Minhas Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Referência</th><th>Valor</th><th>Status</th><th>Pago em</th></tr></thead><tbody>';
   if(!mensalidades.length) html += '<tr><td colspan="4" style="text-align:center;color:var(--muted)">Nenhuma mensalidade.</td></tr>';
-  mensalidades.forEach(m=>html += '<tr><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+(m.status==='pago'?'tag-ok':'tag-danger')+'">'+(m.status==='pago'?'Pago':'Em aberto')+'</span></td><td>'+fmtData(m.dataPag)+'</td></tr>');
+  mensalidades.forEach(m=>{
+    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
+    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
+    html += '<tr><td>'+esc(m.mes)+'</td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td><td>'+fmtData(m.dataPag)+'</td></tr>';
+  });
   html += '</tbody></table></div></div>';
   html += '<div class="grid grid-2">';
   html += '<div class="card"><h3>'+icon('cart')+'Minhas Compras</h3><div class="table-wrap"><table><thead><tr><th>Data</th><th>Total</th><th>Status</th></tr></thead><tbody>';
@@ -1537,23 +1688,77 @@ function renderFinanceiroAluno(){
   html += '</div>';
   document.getElementById('content').innerHTML = html;
 }
+function marcarMensalidadePaga(id){
+  if(!isFull()) return;
+  const ms = DB.get('mensalidades')||[];
+  const m = ms.find(x=>x.id===id);
+  if(m){ m.status='pago'; m.dataPag=hojeISO(); DB.set('mensalidades', ms); toast('Mensalidade marcada como paga.','ok'); renderFinanceiro(); }
+}
+function isentarMensalidade(id){
+  if(!isFull()) return;
+  if(!confirm('Isentar esta mensalidade?')) return;
+  const ms = DB.get('mensalidades')||[];
+  const m = ms.find(x=>x.id===id);
+  if(m){ m.status='isento'; m.dataPag=null; DB.set('mensalidades', ms); toast('Mensalidade isenta.','ok'); renderFinanceiro(); }
+}
+function salvarPix(){
+  const cfg = DB.get('config')||{};
+  cfg.pixKey = document.getElementById('pixChave').value.trim();
+  DB.set('config', cfg);
+  toast('Chave Pix salva.','ok');
+  renderFinanceiro();
+}
+function pixBar(){
+  const chave = (DB.get('config')||{}).pixKey||'';
+  if(!chave) return '';
+  return '<div class="pix-box">'+icon('financeiro',16)+'<span style="flex:1"><b>Pagamento via Pix:</b> '+esc(chave)+'</span><button class="btn btn-gold btn-sm" onclick="copiarPix()">'+icon('check',13)+' Copiar chave</button></div>';
+}
+function copiarPix(){
+  const chave = (DB.get('config')||{}).pixKey||'';
+  if(!chave){ toast('Chave Pix não cadastrada.','warn'); return; }
+  const ok = ()=>toast('Chave Pix copiada!','ok');
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(chave).then(ok).catch(()=>{ fallbackCopy(chave); ok(); }); }
+  else { fallbackCopy(chave); ok(); }
+}
+function fallbackCopy(t){
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  ta.remove();
+}
 
 /* ============ TRILHA / GRADUAÇÃO (RF-09) ============ */
+let trilhaSort = 'nome';
+let trilhaFiltro = 'todas';
 function renderTrilha(){
   const s = Session.get();
   if(s.perfil==='Aluno') return renderTrilhaAluno();
-  setTitle('Graduação','Trilha de faixas IBJJF');
+  setTitle('Graduação','Tabela de faixas IBJJF');
   const alunos = DB.get('alunos')||[];
-  let html = '<div class="grid grid-2">';
-  alunos.forEach(a=>{
+  let lista = alunos.slice();
+  if(trilhaFiltro!=='todas') lista = lista.filter(a=>a.faixa===trilhaFiltro);
+  if(trilhaSort==='nome') lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else lista.sort((a,b)=>(FAIXA_ORDEM.indexOf(a.faixa)-FAIXA_ORDEM.indexOf(b.faixa))||a.nome.localeCompare(b.nome,'pt-BR'));
+  let html = '<div class="toolbar-row">'
+  +'<div class="field"><label>Ordenar por</label><select id="trilhaSort" onchange="trilhaSort=this.value;renderTrilha()"><option value="nome"'+(trilhaSort==='nome'?' selected':'')+'>Ordem alfabética</option><option value="faixa"'+(trilhaSort==='faixa'?' selected':'')+'>Cor da faixa</option></select></div>'
+  +'<div class="field"><label>Filtrar por faixa</label><select id="trilhaFiltro" onchange="trilhaFiltro=this.value;renderTrilha()"><option value="todas"'+(trilhaFiltro==='todas'?' selected':'')+'>Todas as faixas</option>'+FAIXA_ORDEM.map(f=>'<option value="'+f+'"'+(trilhaFiltro===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'
+  +'</div>';
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Graus</th><th>Idade</th><th>Próxima Faixa</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!lista.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhum aluno encontrado.</td></tr>';
+  lista.forEach(a=>{
     const f = faixaInfo(a);
     const idade = idadeDe(a.nascimento);
     const prox = proximaFaixa(a.faixa, idade);
-    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+avHtml(a.foto,a.nome)+'<div><b>'+esc(a.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+(idade!=null?idade+' anos':'idade não informada')+'</div></div></div>'
-    +'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+' • '+f.graus+' grau(s)</span><span style="color:var(--muted)">'+icon('trilha',14)+'</span><span class="belt-chip"><span class="belt-bar" style="background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+'"></span>'+esc(prox||'—')+'</span></div>'
-    +'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="modalGraduar(\''+a.id+'\')">'+icon('award',14)+' Graduar</button><button class="btn btn-ghost btn-sm" onclick="goTrilhaAluno(\''+a.id+'\')">'+icon('eye',14)+' Ver trilha</button></div></div>';
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>'
+    +'<td>'+f.graus+'</td>'
+    +'<td>'+(idade!=null?idade+' anos':'não informada')+'</td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+'"></span>'+esc(prox||'-')+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalGraduar(\''+a.id+'\')">'+icon('award',14)+' Graduar</button> <button class="btn btn-ghost btn-sm" onclick="goTrilhaAluno(\''+a.id+'\')">'+icon('eye',14)+' Ver trilha</button></td></tr>';
   });
-  html += '</div>';
+  html += '</tbody></table></div></div>';
+  html += '<div class="card"><h3>'+icon('trilha')+'Cores das Faixas (IBJJF)</h3><div class="chart-legend">'+FAIXA_ORDEM.map(f=>'<span class="lg"><span class="dot" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span>').join('')+'</div></div>';
   document.getElementById('content').innerHTML = html;
 }
 function proximaFaixa(faixa, idade){
@@ -1574,7 +1779,7 @@ function modalGraduar(alunoId){
   if(prox && idade!=null && idade < FAIXAS_IBJJF[prox].min){
     aviso = '<div class="alert alert-warn">'+icon('warn')+'<div>Idade mínima para a faixa <b>'+prox+'</b> é '+FAIXAS_IBJJF[prox].min+' anos. O aluno tem '+idade+' anos. A graduação não será bloqueada, mas pode confirmar mesmo assim.</div></div>';
   }
-  openModal('<h3>Graduar — '+esc(a.nome)+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  openModal('<h3>Graduar - '+esc(a.nome)+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
   +aviso
   +'<div class="form-grid">'
   +'<div class="field"><label>Faixa atual</label><input value="'+esc(a.faixa)+'" readonly></div>'
@@ -1611,16 +1816,16 @@ function renderTrilhaAluno(){
   const f = faixaInfo(al);
   const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data));
   const idade = idadeDe(al.nascimento);
-  const prox = proximidadeProjeto(al.faixa, idade);
+  const prox = proximaFaixa(al.faixa, idade);
   let html = '<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap">'
   +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+f.hex+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(al.faixa)+'</div><div style="color:var(--muted);font-size:13px">'+f.graus+' grau(s)</div></div>'
   +'<div style="color:var(--muted)">'+icon('trilha',26)+'</div>'
-  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(prox||'—')+'</div><div style="color:var(--muted);font-size:13px">Próxima faixa</div></div>'
+  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(prox||'-')+'</div><div style="color:var(--muted);font-size:13px">Próxima faixa</div></div>'
   +'</div></div>';
   html += '<div class="card"><h3>'+icon('trilha')+'Linha do Tempo</h3><div class="timeline">';
   if(!trilha.length) html += '<p style="color:var(--muted);font-size:13px">Nenhum registro de graduação ainda.</p>';
   trilha.forEach(t=>{
-    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' → '+t.para : 'Grau '+t.de+' → '+t.para;
+    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
     html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
   });
   html += '</div></div>';
@@ -1630,14 +1835,14 @@ function goTrilhaAluno(id){
   current.view='trilha';
   renderNav();
   const al = (DB.get('alunos')||[]).find(a=>a.id===id);
-  setTitle('Trilha — '+al.nome,'Graduação IBJJF');
+  setTitle('Trilha - '+al.nome,'Graduação IBJJF');
   const f = faixaInfo(al);
   const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===id).sort((a,b)=>b.data.localeCompare(a.data));
   let html = '<div class="card" style="text-align:center"><span class="belt-chip"><span class="belt-bar" style="width:22px;height:22px;background:'+f.hex+'"></span>'+esc(al.faixa)+' • '+f.graus+' grau(s)</span></div>';
   html += '<div class="card"><h3>'+icon('trilha')+'Linha do Tempo</h3><div class="timeline">';
   if(!trilha.length) html += '<p style="color:var(--muted)">Nenhum registro.</p>';
   trilha.forEach(t=>{
-    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' → '+t.para : 'Grau '+t.de+' → '+t.para;
+    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
     html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
   });
   html += '</div></div>';
@@ -1650,13 +1855,13 @@ function renderCertificados(){
   setTitle('Certificados','Prévia e emissão com token QR');
   const certs = DB.get('certificados')||[];
   let html = '';
-  if(can(['ADM','Professor'])){
+  if(isStaff()){
     html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalCertificado()">'+icon('plus')+' Emitir Certificado</button></div>';
   }
   html += '<div class="grid grid-2">';
   certs.filter(c=> s.perfil==='Aluno' ? c.alunoId===currentAlunoId() : true).forEach(c=>{
     const al = (DB.get('alunos')||[]).find(a=>a.id===c.alunoId);
-    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+icon('certificados',28)+'<div><b>'+esc(c.titulo)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(al?al.nome:'—')+' • '+fmtData(c.data)+'</div></div></div>'
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+icon('certificados',28)+'<div><b>'+esc(c.titulo)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(al?al.nome:'-')+' • '+fmtData(c.data)+'</div></div></div>'
     +'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Token: <code>'+esc(c.token)+'</code></div>'
     +'<div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="previewCertificado(\''+c.id+'\')">'+icon('eye',14)+' Prévia</button><button class="btn btn-gold btn-sm" onclick="emitirCertificado(\''+c.id+'\')">'+icon('download',14)+' Emitir</button></div></div>';
   });
@@ -1707,7 +1912,7 @@ function emitirCertificado(id){
   const c = (DB.get('certificados')||[]).find(x=>x.id===id);
   const al = (DB.get('alunos')||[]).find(a=>a.id===c.alunoId);
   const cfg = DB.get('config')||{};
-  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Certificado — '+esc(c.titulo)+'</title><style>body{font-family:Georgia,serif;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0} .cert{max-width:800px;text-align:center;border:4px double #c9a227;padding:50px;margin:30px}</style></head><body><div class="cert"><div style="font-size:14px;letter-spacing:4px;color:#888">'+esc((cfg.academyName||'Tatame BJJ').toUpperCase())+'</div><h1 style="font-size:42px;margin:30px 0 10px">CERTIFICADO</h1><p style="color:#666">Certificamos que</p><h2 style="font-size:34px;color:#b8860b;margin:16px 0">'+esc(al.nome)+'</h2><p style="color:#666">foi promovido(a) ao grau de</p><h3 style="font-size:26px;margin:14px 0">'+esc(c.titulo)+'</h3><p style="color:#666">em '+fmtData(c.data)+'</p><p style="margin-top:40px;font-size:12px;color:#999">Token de autenticação: '+esc(c.token)+'</p><p style="font-size:13px;color:#666">'+esc(c.emissor||'')+'</p></div></body></html>';
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Certificado - '+esc(c.titulo)+'</title><style>body{font-family:Georgia,serif;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0} .cert{max-width:800px;text-align:center;border:4px double #c9a227;padding:50px;margin:30px}</style></head><body><div class="cert"><div style="font-size:14px;letter-spacing:4px;color:#888">'+esc((cfg.academyName||'Tatame BJJ').toUpperCase())+'</div><h1 style="font-size:42px;margin:30px 0 10px">CERTIFICADO</h1><p style="color:#666">Certificamos que</p><h2 style="font-size:34px;color:#b8860b;margin:16px 0">'+esc(al.nome)+'</h2><p style="color:#666">foi promovido(a) ao grau de</p><h3 style="font-size:26px;margin:14px 0">'+esc(c.titulo)+'</h3><p style="color:#666">em '+fmtData(c.data)+'</p><p style="margin-top:40px;font-size:12px;color:#999">Token de autenticação: '+esc(c.token)+'</p><p style="font-size:13px;color:#666">'+esc(c.emissor||'')+'</p></div></body></html>';
   const blob = new Blob([html], {type:'text/html;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1717,10 +1922,12 @@ function emitirCertificado(id){
   toast('Certificado emitido.','ok');
 }
 
-/* ============ MARKETPLACE (RF-03) ============ */
+/* ============ LOJA (RF-03) ============ */
 let mpTab = 'produtos';
 function renderMarketplace(){
-  setTitle('Marketplace','Produtos, pedidos e rifas');
+  const s = Session.get();
+  if(s.perfil==='Professor'){ go('dashboard'); return; }
+  setTitle('Loja','Produtos, pedidos e rifas');
   let html = '<div class="tabs">'
   +'<button class="tab'+(mpTab==='produtos'?' active':'')+'" onclick="mpTab=\'produtos\';renderMarketplace()">'+icon('cart',15)+' Produtos</button>'
   +'<button class="tab'+(mpTab==='pedidos'?' active':'')+'" onclick="mpTab=\'pedidos\';renderMarketplace()">'+icon('check',15)+' Meus Pedidos</button>'
@@ -1732,9 +1939,11 @@ function renderMarketplace(){
   document.getElementById('content').innerHTML = html;
 }
 function mpProdutos(){
+  const s = Session.get();
   const produtos = (DB.get('produtos')||[]).filter(p=>p.ativo);
   let html = '';
-  if(can(['ADM','Professor'])){
+  if(s.perfil==='Aluno') html += pixBar();
+  if(isFull()){
     html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalProduto()">'+icon('plus')+' Novo Produto</button></div>';
   }
   html += '<div class="prod-grid">';
@@ -1742,7 +1951,7 @@ function mpProdutos(){
     html += '<div class="prod-card"><div class="prod-img">'+(p.foto?'<img src="'+p.foto+'" alt="">':'<div class="ph">'+icon('image',30)+'<br>Sem foto</div>')+'</div>'
     +'<div class="prod-body"><h4>'+esc(p.nome)+'</h4><div style="font-size:12px;color:var(--muted)">'+esc(p.desc||'')+'</div>'
     +'<div class="price">'+money(p.preco)+'</div><div class="stock">Estoque: '+p.estoque+' un.</div>'
-    +(can(['ADM','Professor'])
+    +(isFull()
       ? '<div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="modalProduto(\''+p.id+'\')">'+icon('edit',13)+'</button><button class="btn btn-danger btn-sm" onclick="excluirProduto(\''+p.id+'\')">'+icon('trash',13)+'</button></div>'
       : '<button class="btn btn-primary btn-sm" '+(p.estoque<=0?'disabled':'')+' onclick="adicionarCarrinho(\''+p.id+'\')">'+icon('cart',13)+' Adicionar</button>')
     +'</div></div>';
@@ -1755,7 +1964,9 @@ function mpPedidos(){
   let pedidos;
   if(s.perfil==='Aluno') pedidos = (DB.get('pedidos')||[]).filter(p=>p.alunoId===currentAlunoId());
   else pedidos = DB.get('pedidos')||[];
-  let html = '<div class="card"><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Data</th><th>Itens</th><th>Total</th><th>Status</th></tr></thead><tbody>';
+  let html = '';
+  if(s.perfil==='Aluno') html += pixBar();
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Data</th><th>Itens</th><th>Total</th><th>Status</th></tr></thead><tbody>';
   if(!pedidos.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhum pedido.</td></tr>';
   pedidos.forEach(p=>{
     const al = (DB.get('alunos')||[]).find(a=>a.id===p.alunoId);
@@ -1772,12 +1983,14 @@ function mpRifas(){
   const agora = Date.now();
   const limite60 = 60*86400000;
   const visiveis = rifas.filter(r=>{
-    if(can(['ADM','Professor'])) return true;
+    if(isFull()) return true;
     if(r.status==='ativa') return true;
     if(r.status==='sorteada' && r.dataSorteio && (agora - new Date(r.dataSorteio+'T00:00:00').getTime()) < limite60) return true;
     return false;
   });
-  let html = '<div class="grid grid-2">';
+  let html = '';
+  if(s.perfil==='Aluno') html += pixBar();
+  html += '<div class="grid grid-2">';
   visiveis.forEach(r=>{
     const bs = bilhetes.filter(b=>b.rifaId===r.id);
     const pagos = bs.filter(b=>b.pago);
@@ -1804,18 +2017,18 @@ function mpRifas(){
     html += '</div>';
     html += '<div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center"><span>'+pagos.length+'/'+r.totalBilhetes+' vendidos • Você: '+meus.length+'</span>';
     if(r.status==='sorteada'){
-      html += '<span class="tag tag-gold">Vencedor: '+esc(vencedorAluno?vencedorAluno.nome:'—')+' (nº '+ (vencedor?vencedor.numero:'—')+')</span>';
-    } else if(can(['ADM','Professor']) && pagos.length>0){
+      html += '<span class="tag tag-gold">Vencedor: '+esc(vencedorAluno?vencedorAluno.nome:'-')+' (nº '+ (vencedor?vencedor.numero:'-')+')</span>';
+    } else if(isFull() && pagos.length>0){
       html += '<button class="btn btn-gold btn-sm" onclick="sortearRifa(\''+r.id+'\')">'+icon('gift',13)+' Sortear</button>';
     }
     html += '</div>';
-    if(can(['ADM','Professor'])){
+    if(isFull()){
       html += '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="modalRifa(\''+r.id+'\')">'+icon('edit',13)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirRifa(\''+r.id+'\')">'+icon('trash',13)+' Excluir</button></div>';
     }
     html += '</div>';
   });
   if(!visiveis.length) html = '<div class="alert alert-info">'+icon('info')+'<div>Nenhuma rifa disponível.</div></div>';
-  if(can(['ADM','Professor'])) html += '<div class="card" style="text-align:center"><button class="btn btn-primary" onclick="modalRifa()">'+icon('plus')+' Nova Rifa</button></div>';
+  if(isFull()) html += '<div class="card" style="text-align:center"><button class="btn btn-primary" onclick="modalRifa()">'+icon('plus')+' Nova Rifa</button></div>';
   html += '</div>';
   return html;
 }
@@ -1858,6 +2071,7 @@ function salvarProduto(id){
   closeModal(); renderMarketplace();
 }
 function excluirProduto(id){
+  if(!isFull()) return;
   if(!confirm('Excluir produto?')) return;
   DB.set('produtos', (DB.get('produtos')||[]).filter(p=>p.id!==id));
   toast('Produto excluído.'); renderMarketplace();
@@ -1893,6 +2107,7 @@ function salvarRifa(id){
   closeModal(); renderMarketplace();
 }
 function excluirRifa(id){
+  if(!isFull()) return;
   if(!confirm('Excluir rifa?')) return;
   DB.set('rifas', (DB.get('rifas')||[]).filter(r=>r.id!==id));
   DB.set('bilhetes', (DB.get('bilhetes')||[]).filter(b=>b.rifaId!==id));
@@ -1910,6 +2125,7 @@ function comprarBilhete(rifaId, numero){
   renderMarketplace();
 }
 function sortearRifa(rifaId){
+  if(!isFull()) return;
   const rifas = DB.get('rifas')||[];
   const bilhetes = DB.get('bilhetes')||[];
   const r = rifas.find(x=>x.id===rifaId);
@@ -1920,16 +2136,18 @@ function sortearRifa(rifaId){
   r.status='sorteada'; r.dataSorteio=hojeISO(); r.vencedor=vencedor.id;
   DB.set('rifas', rifas);
   const al = (DB.get('alunos')||[]).find(a=>a.id===vencedor.alunoId);
-  toast('Sorteio realizado! Vencedor: '+(al?al.nome:'—')+' (nº '+vencedor.numero+').','ok');
+  toast('Sorteio realizado! Vencedor: '+(al?al.nome:'-')+' (nº '+vencedor.numero+').','ok');
   renderMarketplace();
 }
 
 /* ============ PARCEIROS ============ */
 function renderParceiros(){
+  const s = Session.get();
+  if(s.perfil==='Professor'){ go('dashboard'); return; }
   setTitle('Parceiros','Patrocinadores e parcerias');
   const parceiros = DB.get('parceiros')||[];
   let html = '';
-  if(can(['ADM','Professor'])) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalParceiro()">'+icon('plus')+' Novo Parceiro</button></div>';
+  if(isFull()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalParceiro()">'+icon('plus')+' Novo Parceiro</button></div>';
   html += '<div class="grid grid-3">';
   parceiros.forEach(p=>{
     html += '<div class="partner-card'+(p.tipo==='sponsor'?' sponsor':'')+'">'
@@ -1938,7 +2156,7 @@ function renderParceiros(){
     +'<h4>'+esc(p.nome)+'</h4><div class="p-cat">'+esc(p.categoria||'')+'</div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.5">'+esc(p.desc||'')+'</div>'
     +'<div style="font-size:12px;color:var(--muted)">'+icon('perfil',12)+' '+esc(p.contato||'')+'</div>'
-    +(can(['ADM','Professor'])?'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="modalParceiro(\''+p.id+'\')">'+icon('edit',13)+'</button><button class="btn btn-danger btn-sm" onclick="excluirParceiro(\''+p.id+'\')">'+icon('trash',13)+'</button></div>':'')
+    +(isFull()?'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="modalParceiro(\''+p.id+'\')">'+icon('edit',13)+'</button><button class="btn btn-danger btn-sm" onclick="excluirParceiro(\''+p.id+'\')">'+icon('trash',13)+'</button></div>':'')
     +'</div>';
   });
   html += '</div>';
@@ -1966,6 +2184,7 @@ function salvarParceiro(id){
   closeModal(); renderParceiros();
 }
 function excluirParceiro(id){
+  if(!isFull()) return;
   if(!confirm('Excluir parceiro?')) return;
   DB.set('parceiros', (DB.get('parceiros')||[]).filter(p=>p.id!==id));
   toast('Parceiro excluído.'); renderParceiros();
@@ -1976,7 +2195,7 @@ function renderAvisos(){
   const s = Session.get();
   setTitle('Avisos','Comunicados da academia');
   let html = '';
-  if(can(['ADM','Professor'])){
+  if(isStaff()){
     html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalAviso()">'+icon('plus')+' Novo Aviso</button></div>';
   }
   const avisos = DB.get('avisos')||[];
@@ -1989,7 +2208,7 @@ function renderAvisos(){
     +'<span class="n-title">'+esc(a.titulo)+'</span><span class="n-date">'+fmtData(a.data)+' • '+esc(a.autor||'')+'</span></div>'
     +'<div class="n-body">'+esc(a.corpo)+'</div>'
     +(isAluno&&unread?'<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="marcarLido(\''+a.id+'\')">'+icon('check',13)+' Marcar como lido</button>':'')
-    +(can(['ADM','Professor'])?'<button class="btn btn-danger btn-sm" style="margin-top:8px;margin-left:8px" onclick="excluirAviso(\''+a.id+'\')">'+icon('trash',13)+'</button>':'')
+    +(isStaff()?'<button class="btn btn-danger btn-sm" style="margin-top:8px;margin-left:8px" onclick="excluirAviso(\''+a.id+'\')">'+icon('trash',13)+'</button>':'')
     +'</div>';
   });
   if(!avisos.length) html += '<p style="color:var(--muted)">Nenhum aviso.</p>';
@@ -2035,6 +2254,7 @@ function marcarLido(id){
   renderAvisos(); renderNav();
 }
 function excluirAviso(id){
+  if(!isStaff()) return;
   if(!confirm('Excluir aviso?')) return;
   DB.set('avisos', (DB.get('avisos')||[]).filter(a=>a.id!==id));
   toast('Aviso excluído.'); renderAvisos();
@@ -2042,7 +2262,7 @@ function excluirAviso(id){
 
 /* ============ RELATÓRIOS ============ */
 function renderRelatorios(){
-  if(!can(['ADM','Professor'])) return;
+  if(!isFull()) return;
   setTitle('Relatórios','Métricas e exportação');
   const alunos = DB.get('alunos')||[];
   const turmas = DB.get('turmas')||[];
@@ -2050,6 +2270,7 @@ function renderRelatorios(){
   const presencas = DB.get('presencas')||[];
   const pedidos = DB.get('pedidos')||[];
   const ativos = alunos.filter(a=>a.ativo).length;
+  const inad = alunos.filter(a=>mensalidades.some(m=>m.alunoId===a.id&&m.status==='aberto')).length;
   const porFaixa = {};
   alunos.forEach(a=>{ porFaixa[a.faixa]=(porFaixa[a.faixa]||0)+1; });
   const presencasMes = presencas.filter(p=>p.data.startsWith(hojeISO().slice(0,7)));
@@ -2058,23 +2279,24 @@ function renderRelatorios(){
   const receitaLoja = pedidos.reduce((s,p)=>s+p.total,0);
   let html = '<div class="grid grid-4">';
   html += statCard('Alunos Ativos', ativos, 'alunos', '#3498db');
-  html += statCard('Turmas', turmas.length, 'turmas', '#9b59b6');
+  html += statCard('Inadimplentes', inad, 'warn', '#f39c12');
   html += statCard('Presenças (mês)', presentes+'/'+presencasMes.length, 'check', '#2ecc71');
   html += statCard('Receita Total', money(receitaMensalidades+receitaLoja), 'financeiro', '#f9c80e');
   html += '</div>';
   html += '<div class="grid grid-2">';
   html += '<div class="card"><h3>'+icon('trilha')+'Alunos por Faixa</h3><div class="table-wrap"><table><thead><tr><th>Faixa</th><th>Quantidade</th></tr></thead><tbody>';
-  Object.keys(FAIXAS_IBJJF).forEach(f=>{
+  FAIXA_ORDEM.forEach(f=>{
     if(porFaixa[f]) html += '<tr><td><span class="belt-chip"><span class="belt-bar" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span></td><td>'+porFaixa[f]+'</td></tr>';
   });
   html += '</tbody></table></div></div>';
+  html += '<div class="card"><h3>'+icon('presencas')+'Presenças por Turma</h3>'+presencaBars(turmas, presencas)+'</div>';
+  html += '</div>';
   html += '<div class="card"><h3>'+icon('download')+'Exportações</h3>'
   +'<div style="display:flex;flex-direction:column;gap:10px">'
   +'<button class="btn btn-ghost" onclick="exportarAlunosCSV()">'+icon('download')+' Exportar Alunos (CSV)</button>'
   +'<button class="btn btn-ghost" onclick="exportarFinanceiroCSV()">'+icon('download')+' Exportar Financeiro (CSV)</button>'
   +'<button class="btn btn-ghost" onclick="exportarPresencasCSV()">'+icon('download')+' Exportar Presenças (CSV)</button>'
   +'</div></div>';
-  html += '</div>';
   document.getElementById('content').innerHTML = html;
 }
 function exportarAlunosCSV(){
@@ -2087,21 +2309,21 @@ function exportarAlunosCSV(){
 function exportarFinanceiroCSV(){
   const mensalidades = DB.get('mensalidades')||[];
   let csv = 'Aluno;Referencia;Valor;Status;DataPagamento\n';
-  mensalidades.forEach(m=>{ const al=(DB.get('alunos')||[]).find(a=>a.id===m.alunoId); csv += (al?al.nome:'—')+';'+m.mes+';'+m.valor+';'+m.status+';'+(m.dataPag||'')+'\n'; });
+  mensalidades.forEach(m=>{ const al=(DB.get('alunos')||[]).find(a=>a.id===m.alunoId); csv += (al?al.nome:'-')+';'+m.mes+';'+m.valor+';'+m.status+';'+(m.dataPag||'')+'\n'; });
   downloadCSV(csv, 'financeiro_'+hojeISO()+'.csv');
   toast('Exportação gerada.','ok');
 }
 function exportarPresencasCSV(){
   const presencas = DB.get('presencas')||[];
   let csv = 'Aluno;Turma;Data;Presente\n';
-  presencas.forEach(p=>{ const al=(DB.get('alunos')||[]).find(a=>a.id===p.alunoId); const t=(DB.get('turmas')||[]).find(x=>x.id===p.turmaId); csv += (al?al.nome:'—')+';'+(t?t.nome:'—')+';'+p.data+';'+(p.presente?'Sim':'Não')+'\n'; });
+  presencas.forEach(p=>{ const al=(DB.get('alunos')||[]).find(a=>a.id===p.alunoId); const t=(DB.get('turmas')||[]).find(x=>x.id===p.turmaId); csv += (al?al.nome:'-')+';'+(t?t.nome:'-')+';'+p.data+';'+(p.presente?'Sim':'Não')+'\n'; });
   downloadCSV(csv, 'presencas_'+hojeISO()+'.csv');
   toast('Exportação gerada.','ok');
 }
 
 /* ============ WHITE LABEL ============ */
 function renderWhiteLabel(){
-  if(!can(['ADM'])) return;
+  if(!isFull()) return;
   setTitle('White Label','Personalização em tempo real');
   const cfg = DB.get('config')||{};
   let html = '<div class="card"><h3>'+icon('whitelabel')+'Aparência</h3>'
@@ -2143,12 +2365,12 @@ function applyWhiteLabel(){
   const cfg = DB.get('config')||{};
   if(cfg.primary) applyColors(cfg.primary, cfg.secondary||'#f9c80e');
   document.getElementById('wlTagline').textContent = (cfg.tagline||'SISTEMA DE GESTÃO').toUpperCase();
-  document.title = (cfg.academyName||'Tatame BJJ')+' — Sistema de Gestão';
+  document.title = (cfg.academyName||'Tatame BJJ')+' - Sistema de Gestão';
 }
 
 /* ============ CONFIGURAÇÕES ============ */
 function renderConfig(){
-  if(!can(['ADM'])) return;
+  if(!isFull()) return;
   setTitle('Configurações','Preferências do sistema');
   const cfg = DB.get('config')||{};
   let html = '<div class="card"><h3>'+icon('config')+'Configurações Gerais</h3>'
@@ -2160,7 +2382,7 @@ function renderConfig(){
   +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">'+icon('check')+' Salvar</button></div>'
   +'</div>'
   +'<div class="card"><h3>'+icon('info')+'Sobre o Sistema</h3>'
-  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.0 — Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
+  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.1 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
   +'<div style="margin-top:14px"><button class="btn btn-danger" onclick="resetDados()">'+icon('trash')+' Restaurar dados de demonstração</button></div>'
   +'</div>';
   document.getElementById('content').innerHTML = html;
@@ -2195,7 +2417,7 @@ function renderPerfil(){
   +'<div class="field full"><label>Nome</label><input id="perfNome" value="'+esc(user.nome)+'"></div>'
   +'<div class="field"><label>Login</label><input value="'+esc(user.login)+'" readonly></div>'
   +'<div class="field"><label>Perfil</label><input value="'+esc(user.perfil)+'" readonly></div>'
-  +(aluno?'<div class="field"><label>CPF (readonly)</label><input value="'+esc(aluno.cpf?maskCPF(aluno.cpf):'—')+'" readonly></div>':'')
+  +(aluno?'<div class="field"><label>CPF (readonly)</label><input value="'+esc(aluno.cpf?maskCPF(aluno.cpf):'-')+'" readonly></div>':'')
   +'<div class="field"><label>E-mail</label><input id="perfEmail" type="email" value="'+esc(user.email||'')+'"></div>'
   +'</div>'
   +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarPerfil()">'+icon('check')+' Salvar dados</button></div>'
