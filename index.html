@@ -320,14 +320,14 @@ tbody tr:hover{background:var(--card2)}
 
 <script>
 /* ============================================================
-   TATAME BJJ v3.4 - Sistema de Gestão para Academia de Jiu-Jitsu
+   TATAME BJJ v3.5 - Sistema de Gestão para Academia de Jiu-Jitsu
    Perfis: ADM, Professor Líder, Professor e Aluno (com dependentes)
-   Camada de dados: localStorage via objeto DB (v8)
+   Camada de dados: localStorage via objeto DB (v9)
    ============================================================ */
 
-const DB_KEY = 'tatame_bjj_db_v8';
-const SESSION_KEY = 'tatame_bjj_session_v8';
-const DB_VERSION = 8;
+const DB_KEY = 'tatame_bjj_db_v9';
+const SESSION_KEY = 'tatame_bjj_session_v9';
+const DB_VERSION = 9;
 
 const DB = {
   get(key){
@@ -359,10 +359,10 @@ const DB = {
         pixKey:'pix@tatamebjj.com.br'
       },
       users:[
-        {id:'u1', login:'admin', nome:'Administrador', senha:'123456', perfil:'ADM', email:'admin@tatame.com', foto:''},
-        {id:'u2', login:'professor', nome:'Carlos Mendes', senha:'123456', perfil:'Professor', email:'carlos@tatame.com', foto:''},
-        {id:'u3', login:'aluno', nome:'João Silva', senha:'123456', perfil:'Aluno', cpf:'12345678901', email:'joao@email.com', foto:'', alunoId:'a1'},
-        {id:'u4', login:'lider', nome:'Ricardo Almeida', senha:'123456', perfil:'Professor Líder', email:'lider@tatame.com', foto:''}
+        {id:'u1', login:'admin', nome:'Administrador', senha:'123456', perfil:'ADM', email:'admin@tatame.com', foto:'', ativo:true},
+        {id:'u2', login:'professor', nome:'Carlos Mendes', senha:'123456', perfil:'Professor', email:'carlos@tatame.com', foto:'', ativo:true},
+        {id:'u3', login:'aluno', nome:'João Silva', senha:'123456', perfil:'Aluno', cpf:'12345678901', email:'joao@email.com', foto:'', alunoId:'a1', ativo:true},
+        {id:'u4', login:'lider', nome:'Ricardo Almeida', senha:'123456', perfil:'Professor Líder', email:'lider@tatame.com', foto:'', ativo:true}
       ],
       alunos:[
         {id:'a1', nome:'João Silva', cpf:'12345678901', email:'joao@email.com', celular:'(21) 98765-4321', nascimento:'2000-05-14', faixa:'Azul', graus:2, ativo:true, foto:'', dependentes:['a2','a3'], nota:''},
@@ -481,7 +481,6 @@ const money = (v)=> 'R$ ' + Number(v||0).toFixed(2).replace('.', ',');
 const esc = (s)=> String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hojeISO = ()=> new Date().toISOString().slice(0,10);
 const isoLocal = (d)=> d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-const ddmm = (d)=> String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
 const fmtData = (isoStr)=>{
   if(!isoStr) return '-';
   const d = new Date(isoStr + (isoStr.length===10?'T00:00:00':''));
@@ -489,7 +488,6 @@ const fmtData = (isoStr)=>{
   return d.toLocaleDateString('pt-BR');
 };
 const DIA_NOME = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const DIAS_CURTO = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function ultimoDiaDoMes(mes){
   const p = String(mes).split('-').map(Number);
   if(!p[0]||!p[1]) return mes;
@@ -576,8 +574,7 @@ function icon(name, size){
     gift:'<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
     refresh:'<path d="M23 4v6a1 1 0 0 1-1 1h-6"/><path d="M1 20v-6a1 1 0 0 1 1-1h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
     copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-    clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-    lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
+    clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
   };
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="'+(size||18)+'" height="'+(size||18)+'">'+ (paths[name]||paths.info) +'</svg>';
 }
@@ -723,9 +720,6 @@ function avHtml(foto, nome){
   const ini = (nome||'?').trim().charAt(0).toUpperCase();
   return '<span>'+esc(ini)+'</span>';
 }
-function renderAcessoRestrito(){
-  document.getElementById('content').innerHTML = '<div class="alert alert-warn">'+icon('warn')+'<div>Você não tem permissão para acessar esta área. Fale com o Professor Líder.</div></div>';
-}
 function go(view){
   current.view = view;
   closeSidebar();
@@ -739,9 +733,8 @@ function go(view){
     usuarios:renderUsuarios, dependentes:renderDependentes
   };
   const fn = renderers[view] || renderDashboard;
-  try{
-    fn();
-  }catch(err){
+  try{ fn(); }
+  catch(err){
     document.getElementById('content').innerHTML = '<div class="alert alert-danger">'+icon('warn')+'<div>Não foi possível carregar esta tela.<br><small style="opacity:.7">'+esc(err && err.message ? err.message : 'erro inesperado')+'</small></div></div>';
   }
 }
@@ -803,6 +796,10 @@ function doLogin(){
     err.innerHTML = '<div class="alert alert-danger" style="margin-top:12px">'+icon('warn')+'<div>Usuário ou senha inválidos.</div></div>';
     return;
   }
+  if(user.ativo===false){
+    err.innerHTML = '<div class="alert alert-danger" style="margin-top:12px">'+icon('warn')+'<div>Usuário inativo. Fale com o Professor Líder.</div></div>';
+    return;
+  }
   Session.set(user);
   current.depId = null;
   document.getElementById('loginView').style.display='none';
@@ -846,7 +843,7 @@ function openModal(html){
 function closeModal(){ const b=document.getElementById('modalBackdrop'); if(b) b.remove(); }
 
 /* ============================================================
-   FINANCEIRO - cobranças unificadas + Pix
+   FINANCEIRO - núcleo compartilhado
    ============================================================ */
 function todasCobrancas(){
   const alunos = DB.get('alunos')||[];
@@ -912,7 +909,17 @@ function statusCobranca(c){
   return {key:'pendente', label:'Pendente', cls:'tag-warn'};
 }
 function cobrancaVencida(c){ return statusCobranca(c).key==='vencido'; }
+function situacaoFinanceiraAluno(alunoId){
+  const cs = todasCobrancas().filter(c=>c.alunoId===alunoId);
+  const abertas = cs.filter(c=>c.status!=='pago' && c.status!=='isento');
+  const totalAberto = abertas.reduce((s,c)=>s+c.valor,0);
+  const pago = cs.filter(c=>c.status==='pago').reduce((s,c)=>s+c.valor,0);
+  const vencidas = abertas.filter(cobrancaVencida);
+  const proxima = abertas.slice().sort((a,b)=>String(a.vencimento||'').localeCompare(String(b.vencimento||'')))[0];
+  return {totalAberto, pago, inad:vencidas.length>0, vencidas, proxima, abertas:abertas.length};
+}
 
+/* ============ PIX ============ */
 function pixBar(){
   const chave = (DB.get('config')||{}).pixKey||'';
   if(!chave) return '';
@@ -945,61 +952,270 @@ function notifVencidas(alunoId){
   return '<div class="alert alert-danger" style="align-items:center">'+icon('warn')+'<div style="flex:1"><b>'+vencidas.length+' cobrança(s) vencida(s)</b> totalizando '+money(total)+'.<div style="margin-top:6px">'+rows+extra+'</div></div><button class="btn btn-gold btn-sm" onclick="go(\'financeiro\')">'+icon('financeiro',13)+' Ver Financeiro</button></div>';
 }
 
-/* ============ HELPERS DE AGENDA / FREQUÊNCIA ============ */
-function proximasAulas(turmas, limite){
-  const hoje = new Date();
-  const diaHoje = hoje.getDay();
-  const lista = (turmas||[]).map(t=>{
-    const delta = ((Number(t.dia)-diaHoje)+7)%7;
-    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()+delta);
-    return {t, delta, data: isoLocal(d)};
-  });
-  lista.sort((a,b)=> (a.delta-b.delta) || String(a.t.hora||'').localeCompare(String(b.t.hora||'')));
-  return lista.slice(0, limite||6);
-}
-function freqAlunoStats(alunoId, presencas, periodo){
-  const corte = cortePeriodo(periodo);
-  const regs = (presencas||[]).filter(p=>p.alunoId===alunoId && p.data>=corte);
-  const pres = regs.filter(p=>p.presente).length;
-  const faltas = regs.length-pres;
-  const taxa = regs.length?Math.round(pres/regs.length*100):0;
-  const ultima = (presencas||[]).filter(p=>p.alunoId===alunoId && p.presente).sort((a,b)=>b.data.localeCompare(a.data))[0];
-  return {pres, faltas, total:regs.length, taxa, ultima};
-}
-function semanasAluno(alunoId, presencas, n){
-  const hoje = new Date();
-  const out = [];
-  const dow = (hoje.getDay()+6)%7;
-  for(let i=n-1;i>=0;i--){
-    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()-dow-i*7);
-    const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6);
-    const iniIso = isoLocal(ini), fimIso = isoLocal(fim);
-    const cnt = (presencas||[]).filter(p=>p.alunoId===alunoId && p.presente && p.data>=iniIso && p.data<=fimIso).length;
-    out.push({rot: ddmm(ini), cnt, iniIso});
-  }
-  return out;
-}
-function situacaoFinanceiraAluno(alunoId){
-  const cs = todasCobrancas().filter(c=>c.alunoId===alunoId);
-  const abertas = cs.filter(c=>c.status!=='pago' && c.status!=='isento');
-  const totalAberto = abertas.reduce((s,c)=>s+c.valor,0);
-  const pago = cs.filter(c=>c.status==='pago').reduce((s,c)=>s+c.valor,0);
-  const vencidas = abertas.filter(cobrancaVencida);
-  const proxima = abertas.slice().sort((a,b)=>String(a.vencimento||'').localeCompare(String(b.vencimento||'')))[0];
-  return {totalAberto, pago, inad:vencidas.length>0, vencidas, proxima, abertas:abertas.length};
-}
-
 /* ============================================================
-   DASHBOARD EXECUTIVO - ADM / Professor Líder
+   FINANCEIRO - ROTEAMENTO POR PERFIL (corrigido)
    ============================================================ */
-const dashFilter = { periodo:'30d', faixa:'todas', status:'todos' };
+function renderFinanceiro(){
+  const s = Session.get();
+  if(!s) return;
+  if(s.perfil==='Aluno') return renderFinanceiroAluno();
+  if(s.perfil==='Professor') return renderFinanceiroProfessor();
+  return renderFinanceiroGestao();
+}
 
+/* ---------- ADM / Professor Líder: gestão completa ---------- */
+function renderFinanceiroGestao(){
+  setTitle('Financeiro','Gestão de cobranças e pagamentos');
+  const cfg = DB.get('config')||{};
+  const cobrancas = todasCobrancas();
+  const abertas = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento');
+  const totalAberto = abertas.reduce((x,c)=>x+c.valor,0);
+  const totalPagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(hojeISO().slice(0,7))).reduce((x,c)=>x+c.valor,0);
+  const vencidas = abertas.filter(c=>statusCobranca(c).key==='vencido').reduce((x,c)=>x+c.valor,0);
+  const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer').reduce((x,c)=>x+c.valor,0);
+  let html = '';
+  html += '<div class="card"><h3>'+icon('financeiro')+'Chave Pix</h3><div class="row"><div class="field" style="max-width:420px"><label>Chave Pix (recebe mensalidades, loja, rifas e cobranças)</label><input id="pixChave" value="'+esc(cfg.pixKey||'')+'" placeholder="ex.: pix@academia.com.br"></div><div style="align-self:flex-end"><button class="btn btn-primary" onclick="salvarPix()">'+icon('check')+' Salvar chave</button></div></div></div>';
+  html += '<div class="grid grid-4">';
+  html += statCard('Total em Aberto', money(totalAberto), 'warn', '#f39c12');
+  html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
+  html += statCard('Vencido', money(vencidas), 'danger', '#e94560');
+  html += statCard('À Vencer', money(avencer), 'calendar', '#3498db');
+  html += '</div>';
+  html += buildFinanceiroAlunos();
+  html += buildTodasCobrancas();
+  html += buildCobrancasAvulsas();
+  document.getElementById('content').innerHTML = html;
+}
+function buildFinanceiroAlunos(){
+  const alunos = DB.get('alunos')||[];
+  const cobrancas = todasCobrancas();
+  const mesAtual = hojeISO().slice(0,7);
+  let html = '<div class="card"><h3>'+icon('alunos')+'Cobranças por Aluno</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Mensalidade</th><th>Loja</th><th>Rifa</th><th>Avulsa</th><th>Total Aberto</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  alunos.filter(a=>a.ativo).forEach(a=>{
+    const cs = cobrancas.filter(c=>c.alunoId===a.id);
+    const mens = cs.filter(c=>c.tipo==='mensalidade' && c.status!=='pago' && c.status!=='isento');
+    const loja = cs.filter(c=>c.tipo==='loja' && c.status!=='pago');
+    const rifa = cs.filter(c=>c.tipo==='rifa' && c.status!=='pago');
+    const avu = cs.filter(c=>c.tipo==='avulsa' && c.status!=='pago');
+    const total = [...mens,...loja,...rifa,...avu].reduce((s,c)=>s+c.valor,0);
+    const mensAtual = cs.find(c=>c.tipo==='mensalidade' && c.referencia===mesAtual);
+    const st = mensAtual ? statusCobranca(mensAtual) : null;
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+      +'<td>'+(mensAtual?money(mensAtual.valor):'—')+'</td>'
+      +'<td>'+money(loja.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td>'+money(rifa.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td>'+money(avu.reduce((s,c)=>s+c.valor,0))+'</td>'
+      +'<td><b style="color:'+(total>0?'var(--danger)':'var(--ok)')+'">'+money(total)+'</b></td>'
+      +'<td>'+(st?'<span class="tag '+st.cls+'">'+st.label+'</span>':'<span style="color:var(--muted)">—</span>')+'</td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="verCobrancasAluno(\''+a.id+'\')">'+icon('eye',13)+' Ver</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function buildTodasCobrancas(){
+  const cobrancas = todasCobrancas().sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||'')));
+  let html = '<div class="card"><h3>'+icon('financeiro')+'Todas as Cobranças</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Aluno</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Nenhuma cobrança registrada.</td></tr>';
+  cobrancas.forEach(c=>{
+    const st = statusCobranca(c);
+    const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+    html += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td>'+esc(c.aluno)+'</td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+' Status</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function buildCobrancasAvulsas(){
+  const cobrancas = (DB.get('cobrancas')||[]).slice().sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||'')));
+  const alunos = DB.get('alunos')||[];
+  let html = '<div class="card"><h3>'+icon('plus')+'Cobranças Avulsas</h3>';
+  html += '<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="modalNovaCobranca()">'+icon('plus')+' Nova Cobrança Avulsa</button></div>';
+  html += '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhuma cobrança avulsa.</td></tr>';
+  cobrancas.forEach(c=>{
+    const a = alunos.find(x=>x.id===c.alunoId);
+    const st = statusCobranca(c);
+    html += '<tr><td>'+esc(a?a.nome:'-')+'</td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+'</button> <button class="btn btn-danger btn-sm" onclick="excluirCobranca(\''+c.id+'\')">'+icon('trash',13)+'</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function modalNovaCobranca(){
+  const alunos = DB.get('alunos')||[];
+  openModal('<h3>Nova Cobrança Avulsa<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Aluno *</label><select id="cbAluno">'+alunos.filter(a=>a.ativo).map(a=>'<option value="'+a.id+'">'+esc(a.nome)+'</option>').join('')+'</select></div>'
+  +'<div class="field full"><label>Descrição *</label><input id="cbDesc" placeholder="Ex.: Taxa de exame, camiseta, inscrição..."></div>'
+  +'<div class="field"><label>Valor (R$) *</label><input id="cbValor" inputmode="decimal" placeholder="0,00"></div>'
+  +'<div class="field"><label>Vencimento</label><input type="date" id="cbVenc" value="'+hojeISO()+'"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarNovaCobranca()">Criar cobrança</button></div>');
+}
+function salvarNovaCobranca(){
+  const alunoId = document.getElementById('cbAluno').value;
+  const desc = document.getElementById('cbDesc').value.trim();
+  const valor = parseFloat(String(document.getElementById('cbValor').value).replace(',','.'))||0;
+  const venc = document.getElementById('cbVenc').value;
+  if(!desc){ toast('Informe a descrição.','warn'); return; }
+  if(valor<=0){ toast('Informe um valor válido.','warn'); return; }
+  const cobrancas = DB.get('cobrancas')||[];
+  cobrancas.push({id:uid(), alunoId, descricao:desc, valor, status:'aberto', vencimento:venc, criadoEm:hojeISO()});
+  DB.set('cobrancas', cobrancas);
+  toast('Cobrança avulsa criada.','ok');
+  closeModal(); renderFinanceiro();
+}
+function excluirCobranca(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir esta cobrança?')) return;
+  DB.set('cobrancas', (DB.get('cobrancas')||[]).filter(c=>c.id!==id));
+  toast('Cobrança excluída.'); renderFinanceiro();
+}
+function modalEditarStatus(id){
+  const c = todasCobrancas().find(x=>x.id===id);
+  if(!c) return;
+  const st = statusCobranca(c);
+  openModal('<h3>Editar Status<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="alert alert-info">'+icon('info')+'<div><b>'+esc(c.descricao)+'</b><br>'+esc(c.aluno)+' • '+money(c.valor)+' • Status atual: <span class="tag '+st.cls+'">'+st.label+'</span></div></div>'
+  +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+  +'<button class="btn btn-ok" onclick="setStatusCobranca(\''+id+'\',\'pago\')">'+icon('check')+' Marcar como Pago</button>'
+  +'<button class="btn btn-ghost" onclick="setStatusCobranca(\''+id+'\',\'aberto\')">'+icon('warn')+' Marcar como Em aberto</button>'
+  +'</div>'
+  +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>');
+}
+function setStatusCobranca(id, novo){
+  if(!isFull()) return;
+  const [prefix, realId] = id.split('_');
+  if(prefix==='m'){
+    const ms = DB.get('mensalidades')||[];
+    const m = ms.find(x=>x.id===realId);
+    if(m){ m.status = novo==='pago'?'pago':'aberto'; if(novo==='pago') m.dataPag=hojeISO(); else m.dataPag=null; DB.set('mensalidades', ms); }
+  } else if(prefix==='p'){
+    const pedidos = DB.get('pedidos')||[];
+    const p = pedidos.find(x=>x.id===realId);
+    if(p){ p.status = novo==='pago'?'pago':'pendente'; DB.set('pedidos', pedidos); }
+  } else if(prefix==='b'){
+    const bilhetes = DB.get('bilhetes')||[];
+    const b = bilhetes.find(x=>x.id===realId);
+    if(b){ b.pago = novo==='pago'; DB.set('bilhetes', bilhetes); }
+  } else if(prefix==='c'){
+    const cob = DB.get('cobrancas')||[];
+    const c = cob.find(x=>x.id===realId);
+    if(c){ c.status = novo==='pago'?'pago':'aberto'; DB.set('cobrancas', cob); }
+  }
+  toast('Status atualizado.','ok');
+  closeModal(); renderFinanceiro();
+}
+function verCobrancasAluno(alunoId, editavel){
+  const a = (DB.get('alunos')||[]).find(x=>x.id===alunoId);
+  const cobrancas = todasCobrancas().filter(c=>c.alunoId===alunoId).sort((x,y)=>String(y.vencimento||'').localeCompare(String(x.vencimento||'')));
+  const podeEditar = editavel===undefined ? isFull() : editavel;
+  let rows = '';
+  if(!cobrancas.length) rows = '<p style="color:var(--muted);font-size:13px">Nenhuma cobrança para este aluno.</p>';
+  else{
+    rows = '<div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th>'+(podeEditar?'<th style="text-align:right">Ações</th>':'')+'</tr></thead><tbody>';
+    cobrancas.forEach(c=>{
+      const st = statusCobranca(c);
+      const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+      rows += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td>'
+      +(podeEditar?'<td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="closeModal();modalEditarStatus(\''+c.id+'\')">'+icon('edit',13)+'</button></td>':'')+'</tr>';
+    });
+    rows += '</tbody></table></div>';
+  }
+  openModal('<h3>Cobranças de '+esc(a?a.nome:'-')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+rows+'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>');
+}
+function salvarPix(){
+  const cfg = DB.get('config')||{};
+  cfg.pixKey = document.getElementById('pixChave').value.trim();
+  DB.set('config', cfg);
+  toast('Chave Pix salva.','ok');
+  renderFinanceiro();
+}
+
+/* ---------- Professor: situação dos alunos (somente leitura) ---------- */
+function renderFinanceiroProfessor(){
+  setTitle('Financeiro','Situação financeira dos alunos');
+  const alunos = DB.get('alunos')||[];
+  const cobrancas = todasCobrancas();
+  const mesAtual = hojeISO().slice(0,7);
+  const inadimplentes = alunos.filter(a=>a.ativo && situacaoFinanceiraAluno(a.id).inad).length;
+  const totalAberto = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento').reduce((s,c)=>s+c.valor,0);
+  const pagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(mesAtual)).reduce((s,c)=>s+c.valor,0);
+  let html = '<div class="alert alert-info">'+icon('info')+'<div>Você tem acesso de leitura à situação financeira dos alunos. A gestão de pagamentos é exclusiva do ADM e do Professor Líder.</div></div>';
+  html += '<div class="grid grid-4">';
+  html += statCard('Alunos Ativos', alunos.filter(a=>a.ativo).length, 'alunos', '#3498db');
+  html += statCard('Inadimplentes', inadimplentes, 'warn', '#f39c12');
+  html += statCard('Total em Aberto', money(totalAberto), 'financeiro', '#e94560');
+  html += statCard('Pago no Mês', money(pagoMes), 'check', '#2ecc71');
+  html += '</div>';
+  html += '<div class="card"><h3>'+icon('alunos')+'Situação dos Alunos</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Mensalidade</th><th>Total Aberto</th><th>Situação</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  alunos.filter(a=>a.ativo).forEach(a=>{
+    const f = faixaInfo(a);
+    const cs = cobrancas.filter(c=>c.alunoId===a.id);
+    const mensAtual = cs.find(c=>c.tipo==='mensalidade' && c.referencia===mesAtual);
+    const abertas = cs.filter(c=>c.status!=='pago' && c.status!=='isento');
+    const total = abertas.reduce((s,c)=>s+c.valor,0);
+    const sit = situacaoFinanceiraAluno(a.id);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+      +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>'
+      +'<td>'+(mensAtual?money(mensAtual.valor):'—')+'</td>'
+      +'<td><b style="color:'+(total>0?'var(--danger)':'var(--ok)')+'">'+money(total)+'</b></td>'
+      +'<td>'+(sit.inad?'<span class="tag tag-danger">Inadimplente</span>':'<span class="tag tag-ok">Adimplente</span>')+'</td>'
+      +'<td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="verCobrancasAluno(\''+a.id+'\',false)">'+icon('eye',13)+' Ver</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+/* ---------- Aluno: histórico + situação das cobranças ---------- */
+function renderFinanceiroAluno(){
+  const al = alunoAtual();
+  if(!al){ document.getElementById('content').innerHTML='<div class="alert alert-warn">'+icon('warn')+'<div>Aluno não encontrado.</div></div>'; return; }
+  setTitle('Meu Financeiro','Histórico de pagamentos e cobranças');
+  const cobrancas = todasCobrancas().filter(c=>c.alunoId===al.id);
+  const abertas = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento');
+  const totalAberto = abertas.reduce((s,c)=>s+c.valor,0);
+  const totalPagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(hojeISO().slice(0,7))).reduce((s,c)=>s+c.valor,0);
+  const vencidas = abertas.filter(cobrancaVencida);
+  const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer');
+  const proximas = avencer.slice().sort((a,b)=>String(a.vencimento||'').localeCompare(String(b.vencimento||''))).slice(0,5);
+  let html = pixBar();
+  html += notifVencidas(al.id);
+  html += '<div class="grid grid-4">';
+  html += statCard('Em Aberto', money(totalAberto), 'warn', '#f39c12');
+  html += statCard('Pago no Mês', money(totalPagoMes), 'check', '#2ecc71');
+  html += statCard('Vencido', money(vencidas.reduce((s,c)=>s+c.valor,0)), 'danger', '#e94560');
+  html += statCard('À Vencer', money(avencer.reduce((s,c)=>s+c.valor,0)), 'calendar', '#3498db');
+  html += '</div>';
+
+  html += '<div class="card"><h3>'+icon('calendar')+'Próximos Pagamentos</h3>';
+  if(!proximas.length) html += '<p style="color:var(--muted);font-size:13px">Nenhum pagamento à vencer. Você está em dia.</p>';
+  else{
+    html += '<div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>';
+    proximas.forEach(c=>{
+      const st = statusCobranca(c);
+      html += '<tr><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  html += '<div class="card"><h3>'+icon('financeiro')+'Histórico de Pagamentos e Cobranças</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>';
+  if(!cobrancas.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma cobrança registrada.</td></tr>';
+  cobrancas.sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||''))).forEach(c=>{
+    const st = statusCobranca(c);
+    const tipoLbl = {mensalidade:'Mensalidade', loja:'Loja', rifa:'Rifa', avulsa:'Avulsa'}[c.tipo]||c.tipo;
+    html += '<tr><td><span class="tag tag-muted">'+tipoLbl+'</span></td><td style="font-size:13px">'+esc(c.descricao)+'</td><td>'+money(c.valor)+'</td><td>'+fmtData(c.vencimento)+'</td><td><span class="tag '+st.cls+'">'+st.label+'</span></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+/* ============ DASHBOARDS ============ */
 function renderDashboard(){
   const s = Session.get();
   if(s.perfil==='Aluno') return renderDashboardAluno();
   if(s.perfil==='Professor') return renderDashboardProfessor();
   setTitle('Dashboard Executivo','Análise gerencial em tempo real');
-
   const alunos = DB.get('alunos')||[];
   const turmas = DB.get('turmas')||[];
   const mensalidades = DB.get('mensalidades')||[];
@@ -1007,159 +1223,204 @@ function renderDashboard(){
   const pedidos = DB.get('pedidos')||[];
   const bilhetes = DB.get('bilhetes')||[];
   const rifas = DB.get('rifas')||[];
-
-  const corte = cortePeriodo(dashFilter.periodo);
-
-  let alunosF = alunos.slice();
-  if(dashFilter.faixa!=='todas') alunosF = alunosF.filter(a=>a.faixa===dashFilter.faixa);
-  if(dashFilter.status!=='todos') alunosF = alunosF.filter(a=>a.ativo===(dashFilter.status==='ativo'));
-
-  const idsF = new Set(alunosF.map(a=>a.id));
-  const mensalidadesF = mensalidades.filter(m=>idsF.has(m.alunoId));
-  const pedidosF = pedidos.filter(p=>idsF.has(p.alunoId));
-  const presencasF = presencas.filter(p=>idsF.has(p.alunoId));
-
-  const ativos = alunosF.filter(a=>a.ativo).length;
-  const receitaMes = mensalidadesF.filter(m=>m.mes===hojeISO().slice(0,7)&&m.status==='pago').reduce((x,m)=>x+m.valor,0);
-  const vendas = pedidosF.reduce((x,p)=>x+p.total,0);
-  const receitaRifas = bilhetes.filter(b=>b.pago&&idsF.has(b.alunoId)).reduce((x,b)=>{const r=rifas.find(q=>q.id===b.rifaId);return x+(r?r.preco:0);},0);
-  const emAberto = mensalidadesF.filter(m=>m.status==='aberto').reduce((x,m)=>x+m.valor,0);
-  const presentes = presencasF.filter(p=>p.presente).length;
-  const taxa = presencasF.length? Math.round(presentes/presencasF.length*100) : 0;
-
+  const ativos = alunos.filter(a=>a.ativo).length;
+  const receitaMes = mensalidades.filter(m=>m.mes===hojeISO().slice(0,7)&&m.status==='pago').reduce((x,m)=>x+m.valor,0);
+  const vendas = pedidos.reduce((x,p)=>x+p.total,0);
+  const receitaRifas = bilhetes.filter(b=>b.pago).reduce((x,b)=>{const r=rifas.find(q=>q.id===b.rifaId);return x+(r?r.preco:0);},0);
+  const emAberto = mensalidades.filter(m=>m.status==='aberto').reduce((x,m)=>x+m.valor,0);
+  const presentes = presencas.filter(p=>p.presente).length;
+  const taxa = presencas.length? Math.round(presentes/presencas.length*100) : 0;
   let html = '<div class="dash">';
   html += notifVencidas();
-
-  html += '<div class="dash-toolbar">'
-    +'<div class="filters">'
-    +'<div class="field"><label>Período</label><select onchange="dashFilter.periodo=this.value;renderDashboard()">'
-    +'<option value="7d"'+(dashFilter.periodo==='7d'?' selected':'')+'>Últimos 7 dias</option>'
-    +'<option value="30d"'+(dashFilter.periodo==='30d'?' selected':'')+'>Últimos 30 dias</option>'
-    +'<option value="90d"'+(dashFilter.periodo==='90d'?' selected':'')+'>Últimos 90 dias</option>'
-    +'</select></div>'
-    +'<div class="field"><label>Faixa</label><select onchange="dashFilter.faixa=this.value;renderDashboard()">'
-    +'<option value="todas"'+(dashFilter.faixa==='todas'?' selected':'')+'>Todas</option>'
-    +Object.keys(FAIXAS_IBJJF).map(f=>'<option value="'+f+'"'+(dashFilter.faixa===f?' selected':'')+'>'+f+'</option>').join('')
-    +'</select></div>'
-    +'<div class="field"><label>Status</label><select onchange="dashFilter.status=this.value;renderDashboard()">'
-    +'<option value="todos"'+(dashFilter.status==='todos'?' selected':'')+'>Todos</option>'
-    +'<option value="ativo"'+(dashFilter.status==='ativo'?' selected':'')+'>Ativos</option>'
-    +'<option value="inativo"'+(dashFilter.status==='inativo'?' selected':'')+'>Inativos</option>'
-    +'</select></div>'
-    +'</div>'
-    +'<button class="btn btn-ghost btn-sm refresh" onclick="renderDashboard()">'+icon('refresh',14)+' Atualizar</button>'
-    +'</div>';
-
   html += '<div class="kpi-row">';
-  html += kpiCard('Alunos Ativos', ativos, 'alunos', '#3498db', periodoLabel(dashFilter.periodo), [3,4,5,ativos]);
+  html += kpiCard('Alunos Ativos', ativos, 'alunos', '#3498db', 'Total de alunos ativos', [3,4,5,ativos]);
   html += kpiCard('Receita no Mês', money(receitaMes+vendas+receitaRifas), 'financeiro', '#2ecc71', 'Mensalidades + Loja + Rifas', [2,3,4,receitaMes+vendas+receitaRifas]);
-  html += kpiCard('Em Aberto', money(emAberto), 'warn', '#f39c12', mensalidadesF.filter(m=>m.status==='aberto').length+' mensalidade(s)', [4,3,2,emAberto]);
-  html += kpiCard('Taxa de Presença', taxa+'%', 'check', '#9b59b6', presentes+' de '+presencasF.length+' registros', [0,50,70,taxa]);
+  html += kpiCard('Em Aberto', money(emAberto), 'warn', '#f39c12', mensalidades.filter(m=>m.status==='aberto').length+' mensalidade(s)', [4,3,2,emAberto]);
+  html += kpiCard('Taxa de Presença', taxa+'%', 'check', '#9b59b6', presentes+' de '+presencas.length+' registros', [0,50,70,taxa]);
   html += '</div>';
-
   html += '<div class="dash-grid cols-2">';
-  html += '<div class="panel"><div class="panel-head"><h3>'+icon('financeiro')+'Receita no Período</h3><span class="hint">Mensalidades pagas + vendas</span></div>'
-    + receitaLineChart(mensalidadesF, pedidosF, corte) +'</div>';
-  html += '<div class="panel"><div class="panel-head"><h3>'+icon('trilha')+'Alunos por Faixa</h3><span class="hint">Distribuição atual</span></div>'
-    + donutFaixas(alunosF) +'</div>';
-  html += '</div>';
-  html += '</div>';
+  html += '<div class="panel"><div class="panel-head"><h3>'+icon('turmas')+'Turmas de Hoje</h3><span class="hint">'+DIA_NOME[new Date().getDay()]+'</span></div>'+turmasHojeHtml(turmas)+'</div>';
+  html += '<div class="panel"><div class="panel-head"><h3>'+icon('alunos')+'Últimos Alunos</h3></div>'+ultimosAlunosHtml(alunos)+'</div>';
+  html += '</div></div>';
   document.getElementById('content').innerHTML = html;
 }
-
-/* ---------- DASHBOARD DO PROFESSOR (operacional) ---------- */
-const dashProf = { freqPeriodo:'30d', turmaId:'todas' };
+function turmasHojeHtml(turmas){
+  const dia = new Date().getDay();
+  const hoje = hojeISO();
+  const ags = DB.get('agendamentos')||[];
+  const profs = DB.get('professores')||[];
+  const lista = turmas.filter(t=>Number(t.dia)===dia);
+  if(!lista.length) return '<div class="chart-tip">Nenhuma turma hoje.</div>';
+  let html = '<div class="table-wrap"><table><thead><tr><th>Turma</th><th>Professor</th><th>Horário</th><th>Vagas</th></tr></thead><tbody>';
+  lista.forEach(t=>{
+    const prof = profs.find(p=>p.id===t.professor);
+    const cnt = ags.filter(a=>a.turmaId===t.id && a.data===hoje).length;
+    html += '<tr><td><b>'+esc(t.nome)+'</b></td><td>'+esc(prof?prof.nome:'-')+'</td><td>'+esc(t.hora)+'</td><td>'+cnt+'/'+t.vagas+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function ultimosAlunosHtml(alunos){
+  if(!alunos.length) return '<div class="chart-tip">Nenhum aluno.</div>';
+  let html = '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Status</th></tr></thead><tbody>';
+  alunos.slice(-5).reverse().forEach(a=>{
+    const f = faixaInfo(a);
+    html += '<tr><td>'+esc(a.nome)+'</td><td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td><td><span class="tag '+(a.ativo?'tag-ok':'tag-danger')+'">'+(a.ativo?'Ativo':'Inativo')+'</span></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
 function renderDashboardProfessor(){
-  setTitle('Dashboard do Professor','Próximas aulas, agendamentos e frequência');
-  const turmas = DB.get('turmas')||[];
+  setTitle('Dashboard do Professor','Visão operacional');
   const alunos = DB.get('alunos')||[];
+  const turmas = DB.get('turmas')||[];
   const presencas = DB.get('presencas')||[];
   const agendamentos = DB.get('agendamentos')||[];
   const profs = DB.get('professores')||[];
   const hoje = hojeISO();
   const diaHoje = new Date().getDay();
-
-  const prox = proximasAulas(turmas, 6);
   const turmasHoje = turmas.filter(t=>Number(t.dia)===diaHoje);
   const agsHoje = agendamentos.filter(a=>a.data===hoje);
-  const corte = cortePeriodo(dashProf.freqPeriodo);
-  const presF = presencas.filter(p=>p.data>=corte && (dashProf.turmaId==='todas'||p.turmaId===dashProf.turmaId));
   const presHoje = presencas.filter(p=>p.data===hoje && p.presente).length;
-  const alunosAtivos = alunos.filter(a=>a.ativo).length;
-
   let html = '<div class="grid grid-4">';
   html += statCard('Turmas Hoje', turmasHoje.length, 'turmas', '#9b59b6');
   html += statCard('Agendamentos Hoje', agsHoje.length, 'calendar', '#3498db');
   html += statCard('Presenças Hoje', presHoje, 'presencas', '#2ecc71');
-  html += statCard('Alunos Ativos', alunosAtivos, 'alunos', '#f9c80e');
+  html += statCard('Alunos Ativos', alunos.filter(a=>a.ativo).length, 'alunos', '#f9c80e');
   html += '</div>';
-
   html += '<div class="dash-grid cols-2">';
-
-  // Próximas aulas
-  html += '<div class="panel"><div class="panel-head"><h3>'+icon('clock',16)+'Próximas Aulas</h3><span class="hint">Grade semanal</span></div>';
-  if(!prox.length) html += '<div class="chart-tip">Nenhuma turma cadastrada.</div>';
-  else{
-    html += '<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Turma</th><th>Horário</th><th>Professor</th><th>Agendados</th></tr></thead><tbody>';
-    prox.forEach(x=>{
-      const t = x.t;
-      const prof = profs.find(p=>p.id===t.professor);
-      const cnt = agendamentos.filter(a=>a.turmaId===t.id && a.data===x.data).length;
-      const quando = x.delta===0 ? 'Hoje' : (x.delta===1 ? 'Amanhã' : DIA_NOME[Number(t.dia)]);
-      html += '<tr><td><b>'+quando+'</b><div style="font-size:11px;color:var(--muted)">'+fmtData(x.data)+'</div></td>'
-        +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+(t.cor||'#e94560')+'"></span>'+esc(t.nome)+'</span></td>'
-        +'<td>'+esc(t.hora||'-')+'</td>'
-        +'<td>'+esc(prof?prof.nome:'-')+'</td>'
-        +'<td>'+cnt+'/'+t.vagas+'</td></tr>';
-    });
-    html += '</tbody></table></div>';
-  }
+  html += '<div class="panel"><div class="panel-head"><h3>'+icon('clock',16)+'Próximas Aulas</h3><span class="hint">Grade semanal</span></div>'+proximasAulasHtml(turmas, profs, agendamentos)+'</div>';
+  html += '<div class="panel"><div class="panel-head"><h3>'+icon('calendar',16)+'Agendamentos de Hoje</h3><span class="hint">'+fmtData(hoje)+'</span></div>'+agsHojeHtml(agsHoje, alunos, turmas)+'</div>';
   html += '</div>';
-
-  // Agendamentos de hoje
-  html += '<div class="panel"><div class="panel-head"><h3>'+icon('calendar',16)+'Agendamentos de Hoje</h3><span class="hint">'+fmtData(hoje)+'</span></div>';
-  if(!agsHoje.length) html += '<div class="chart-tip">Sem agendamentos hoje.</div>';
-  else{
-    html += '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Turma</th><th>Horário</th><th>Status</th></tr></thead><tbody>';
-    agsHoje.slice().sort((a,b)=>String(a.data).localeCompare(b.data)).forEach(a=>{
-      const al = alunos.find(x=>x.id===a.alunoId);
-      const t = turmas.find(x=>x.id===a.turmaId);
-      html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(t?t.nome:'-')+'</td><td>'+esc(t?t.hora:'-')+'</td><td><span class="tag tag-blue">'+esc(a.status||'confirmado')+'</span></td></tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-  html += '</div>';
-  html += '</div>';
-
-  // Histórico de frequência
-  html += '<div class="panel"><div class="panel-head"><h3>'+icon('presencas',16)+'Histórico de Frequência</h3><span class="hint">'+periodoLabel(dashProf.freqPeriodo)+'</span></div>';
-  html += '<div class="toolbar-row">'
-    +'<div class="field"><label>Período</label><select onchange="dashProf.freqPeriodo=this.value;renderDashboardProfessor()">'
-    +'<option value="7d"'+(dashProf.freqPeriodo==='7d'?' selected':'')+'>Últimos 7 dias</option>'
-    +'<option value="30d"'+(dashProf.freqPeriodo==='30d'?' selected':'')+'>Últimos 30 dias</option>'
-    +'<option value="90d"'+(dashProf.freqPeriodo==='90d'?' selected':'')+'>Últimos 90 dias</option>'
-    +'<option value="todos"'+(dashProf.freqPeriodo==='todos'?' selected':'')+'>Todo o histórico</option>'
-    +'</select></div>'
-    +'<div class="field"><label>Turma</label><select onchange="dashProf.turmaId=this.value;renderDashboardProfessor()"><option value="todas"'+(dashProf.turmaId==='todas'?' selected':'')+'>Todas</option>'+turmas.map(t=>'<option value="'+t.id+'"'+(dashProf.turmaId===t.id?' selected':'')+'>'+esc(t.nome)+'</option>').join('')+'</select></div>'
-    +'</div>';
-  const hist = presF.slice().sort((a,b)=>b.data.localeCompare(a.data)).slice(0,12);
-  if(!hist.length) html += '<div class="chart-tip">Nenhuma frequência registrada no período.</div>';
-  else{
-    html += '<div class="table-wrap"><table><thead><tr><th>Data</th><th>Aluno</th><th>Turma</th><th>Situação</th></tr></thead><tbody>';
-    hist.forEach(p=>{
-      const al = alunos.find(x=>x.id===p.alunoId);
-      const t = turmas.find(x=>x.id===p.turmaId);
-      html += '<tr><td>'+fmtData(p.data)+'</td><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(t?t.nome:'-')+'</td>'
-        +'<td>'+(p.presente?'<span class="tag tag-ok">Presente</span>':'<span class="tag tag-danger">Falta</span>')+'</td></tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-  html += '</div>';
-
+  html += '<div class="panel"><div class="panel-head"><h3>'+icon('presencas',16)+'Histórico de Frequência</h3><span class="hint">Últimos 12 registros</span></div>'+freqHistoricoHtml(presencas, alunos, turmas)+'</div>';
   document.getElementById('content').innerHTML = html;
 }
-
-/* ---------- KPI CARD ---------- */
+function proximasAulasHtml(turmas, profs, agendamentos){
+  const hoje = new Date();
+  const diaHoje = hoje.getDay();
+  const lista = (turmas||[]).map(t=>{
+    const delta = ((Number(t.dia)-diaHoje)+7)%7;
+    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()+delta);
+    return {t, delta, data: isoLocal(d)};
+  }).sort((a,b)=> (a.delta-b.delta) || String(a.t.hora||'').localeCompare(String(b.t.hora||''))).slice(0,6);
+  if(!lista.length) return '<div class="chart-tip">Nenhuma turma cadastrada.</div>';
+  let html = '<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Turma</th><th>Horário</th><th>Professor</th><th>Agendados</th></tr></thead><tbody>';
+  lista.forEach(x=>{
+    const t = x.t;
+    const prof = profs.find(p=>p.id===t.professor);
+    const cnt = agendamentos.filter(a=>a.turmaId===t.id && a.data===x.data).length;
+    const quando = x.delta===0 ? 'Hoje' : (x.delta===1 ? 'Amanhã' : DIA_NOME[Number(t.dia)]);
+    html += '<tr><td><b>'+quando+'</b><div style="font-size:11px;color:var(--muted)">'+fmtData(x.data)+'</div></td><td>'+esc(t.nome)+'</td><td>'+esc(t.hora||'-')+'</td><td>'+esc(prof?prof.nome:'-')+'</td><td>'+cnt+'/'+t.vagas+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function agsHojeHtml(ags, alunos, turmas){
+  if(!ags.length) return '<div class="chart-tip">Sem agendamentos hoje.</div>';
+  let html = '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Turma</th><th>Horário</th><th>Status</th></tr></thead><tbody>';
+  ags.forEach(a=>{
+    const al = alunos.find(x=>x.id===a.alunoId);
+    const t = turmas.find(x=>x.id===a.turmaId);
+    html += '<tr><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(t?t.nome:'-')+'</td><td>'+esc(t?t.hora:'-')+'</td><td><span class="tag tag-blue">'+esc(a.status||'confirmado')+'</span></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function freqHistoricoHtml(presencas, alunos, turmas){
+  const hist = presencas.slice().sort((a,b)=>b.data.localeCompare(a.data)).slice(0,12);
+  if(!hist.length) return '<div class="chart-tip">Nenhuma frequência registrada.</div>';
+  let html = '<div class="table-wrap"><table><thead><tr><th>Data</th><th>Aluno</th><th>Turma</th><th>Situação</th></tr></thead><tbody>';
+  hist.forEach(p=>{
+    const al = alunos.find(x=>x.id===p.alunoId);
+    const t = turmas.find(x=>x.id===p.turmaId);
+    html += '<tr><td>'+fmtData(p.data)+'</td><td>'+esc(al?al.nome:'-')+'</td><td>'+esc(t?t.nome:'-')+'</td><td>'+(p.presente?'<span class="tag tag-ok">Presente</span>':'<span class="tag tag-danger">Falta</span>')+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function renderDashboardAluno(){
+  const al = alunoAtual();
+  if(!al){ document.getElementById('content').innerHTML='<div class="alert alert-warn">'+icon('warn')+'<div>Aluno não encontrado.</div></div>'; return; }
+  setTitle('Meu Dashboard','Olá, '+al.nome.split(' ')[0]);
+  const f = faixaInfo(al);
+  const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
+  const hoje = new Date().getDay();
+  const turmas = (DB.get('turmas')||[]).filter(t=>t.dia===hoje);
+  const ags = DB.get('agendamentos')||[];
+  const avisos = DB.get('avisos')||[];
+  const meusAvisos = avisos.filter(a=>!a.lidos.includes(al.id)).slice(0,3);
+  const fin = situacaoFinanceiraAluno(al.id);
+  let html = notifVencidas(al.id);
+  html += '<div class="grid grid-3" style="margin-bottom:16px">';
+  html += '<div class="stat-card"><div class="label">Minha Faixa</div><div style="display:flex;align-items:center;gap:10px;margin-top:6px"><span class="belt-bar" style="width:26px;height:26px;background:'+f.hex+'"></span><div><div class="value" style="font-size:20px">'+esc(al.faixa)+'</div><div class="sub">'+f.graus+' grau(s)</div></div></div></div>';
+  html += '<div class="stat-card"><div class="label">Turmas Hoje</div><div class="value">'+turmas.length+'</div><div class="sub">'+DIA_NOME[hoje]+'</div></div>';
+  html += '<div class="stat-card"><div class="label">Situação Financeira</div><div class="value" style="font-size:20px;color:'+(fin.inad?'var(--danger)':'var(--ok)')+'">'+(fin.inad?'Inadimplente':'Em dia')+'</div><div class="sub">'+money(fin.totalAberto)+' em aberto</div></div>';
+  html += '</div>';
+  html += '<div class="grid grid-2">';
+  html += '<div class="card"><h3>'+icon('trilha')+'Minha Trilha de Graduação</h3>';
+  if(!trilha.length){ html += '<p style="color:var(--muted);font-size:13px">Nenhum registro ainda.</p>'; }
+  else{
+    html += '<div class="timeline">';
+    trilha.forEach(t=>{
+      const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
+      html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
+    });
+    html += '</div>';
+  }
+  html += '<button class="btn btn-ghost btn-sm" onclick="go(\'trilha\')">Ver trilha completa</button></div>';
+  html += '<div class="card"><h3>'+icon('turmas')+'Turmas de Hoje</h3>';
+  if(!turmas.length){ html += '<p style="color:var(--muted);font-size:13px">Nenhuma turma hoje.</p>'; }
+  else{
+    turmas.forEach(t=>{
+      const prof = (DB.get('professores')||[]).find(p=>p.id===t.professor);
+      const agsTurma = ags.filter(a=>a.turmaId===t.id && a.data===hojeISO());
+      const meuAg = agsTurma.find(a=>a.alunoId===al.id);
+      const lotada = agsTurma.length>=t.vagas;
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--card2)">';
+      html += '<span class="belt-bar" style="width:10px;height:40px;border-radius:3px;background:'+(t.cor||'#e94560')+'"></span>';
+      html += '<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(prof?prof.nome:'-')+' • '+esc(t.hora)+' • '+agsTurma.length+'/'+t.vagas+' vagas</div></div>';
+      if(meuAg){
+        html += '<button class="btn btn-ok btn-sm" onclick="cancelarAgendamento(\''+meuAg.id+'\')">'+icon('check')+' Agendado</button>';
+      } else if(lotada){
+        html += '<button class="btn btn-ghost btn-sm" disabled>Lotada</button>';
+      } else {
+        html += '<button class="btn btn-primary btn-sm" onclick="agendarTurma(\''+t.id+'\')">Agendar</button>';
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="card"><h3>'+icon('avisos')+'Avisos Recentes</h3>';
+  if(!meusAvisos.length){ html += '<p style="color:var(--muted);font-size:13px">Você está em dia com os avisos.</p>'; }
+  else{
+    meusAvisos.forEach(a=>{
+      html += '<div class="notice unread"><div class="n-head"><span class="tag tag-danger">Nova</span><span class="n-title">'+esc(a.titulo)+'</span><span class="n-date">'+fmtData(a.data)+'</span></div><div class="n-body">'+esc(a.corpo)+'</div></div>';
+    });
+  }
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function agendarTurma(turmaId){
+  const al = alunoAtual();
+  const ags = DB.get('agendamentos')||[];
+  const hoje = hojeISO();
+  const turma = (DB.get('turmas')||[]).find(t=>t.id===turmaId);
+  const agsTurma = ags.filter(a=>a.turmaId===turmaId && a.data===hoje);
+  if(agsTurma.length>=turma.vagas){ toast('Turma lotada.','warn'); return; }
+  if(ags.some(a=>a.alunoId===al.id && a.turmaId===turmaId && a.data===hoje)){ toast('Você já está agendado.','warn'); return; }
+  ags.push({id:uid(), alunoId:al.id, turmaId, data:hoje, status:'confirmado'});
+  DB.set('agendamentos', ags);
+  toast('Agendamento confirmado!','ok');
+  renderDashboardAluno();
+}
+function cancelarAgendamento(agId){
+  let ags = DB.get('agendamentos')||[];
+  ags = ags.filter(a=>a.id!==agId);
+  DB.set('agendamentos', ags);
+  toast('Agendamento cancelado.');
+  renderDashboardAluno();
+}
 function kpiCard(label, value, ic, color, foot, spark){
   return '<div class="kpi" style="--kpi-c:'+color+'">'
     +'<div class="k-label">'+icon(ic,14)+esc(label)+'</div>'
@@ -1179,23 +1440,1253 @@ function sparkSvg(arr, color){
   return '<polygon points="'+area+'" fill="'+color+'" opacity="0.12"/>'
     +'<polyline points="'+line+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
 }
-function receitaLineChart(mensalidades, pedidos, corte){
-  const meses = [];
-  const d = new Date(corte+'T00:00:00');
-  for(let i=0;i<6;i++){
-    const m = new Date(d.getFullYear(), d.getMonth()+i, 1);
-    meses.push({chave:m.toISOString().slice(0,7), rot:m.toLocaleDateString('pt-BR',{month:'short'})});
-  }
-  const valores = meses.map(m=>{
-    const ms = mensalidades.filter(x=>x.mes===m.chave&&x.status==='pago').reduce((s,x)=>s+x.valor,0);
-    const pd = pedidos.filter(p=>p.data.startsWith(m.chave)).reduce((s,p)=>s+p.total,0);
-    return ms+pd;
+function statCard(label, value, ic, color){
+  return '<div class="stat-card"><div class="icon" style="background:rgba(0,0,0,.25);color:'+color+'">'+icon(ic)+'</div><div class="label">'+esc(label)+'</div><div class="value">'+value+'</div></div>';
+}
+
+/* ============ ALUNOS (CRM) ============ */
+function renderAlunos(){
+  if(!isStaff()) return;
+  setTitle('Gestão de Alunos','Cadastro, edição e exclusão');
+  const alunos = DB.get('alunos')||[];
+  const q = (document.getElementById('search')||{}).value||'';
+  const filtrados = alunos.filter(a=>a.nome.toLowerCase().includes(q.toLowerCase()) || (a.cpf||'').includes(q));
+  let html = '<div class="row" style="margin-bottom:16px">';
+  html += '<div class="field" style="max-width:320px"><label>'+icon('search',13)+' Buscar</label><input id="search" placeholder="Nome ou CPF" value="'+esc(q)+'" oninput="renderAlunos()"></div>';
+  html += '<div style="align-self:flex-end;margin-left:auto;display:flex;gap:10px">';
+  if(isFull()) html += '<button class="btn btn-gold" onclick="exportarAlunosCompletoCSV()">'+icon('download')+' Baixar lista de alunos</button>';
+  html += '<button class="btn btn-primary" onclick="modalAluno()">'+icon('plus')+' Novo Aluno</button>';
+  html += '</div></div>';
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>CPF</th><th>Celular</th><th>Faixa</th><th>Mensalidade</th><th>Adimplência</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  filtrados.forEach(a=>{
+    const f = faixaInfo(a);
+    const fin = situacaoFinanceiraAluno(a.id);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<div><b>'+esc(a.nome)+'</b><div style="font-size:11px;color:var(--muted)">'+esc(a.email||'-')+'</div></div></div></td>';
+    html += '<td>'+esc(a.cpf?maskCPF(a.cpf):'-')+'</td><td>'+esc(a.celular||'-')+'</td>';
+    html += '<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>';
+    html += '<td>'+money(fin.proxima?fin.proxima.valor:150)+'</td>';
+    html += '<td>'+(fin.inad?'<span class="tag tag-danger">Inadimplente</span>':'<span class="tag tag-ok">Adimplente</span>')+'</td>';
+    html += '<td><span class="tag '+(a.ativo?'tag-ok':'tag-danger')+'">'+(a.ativo?'Ativo':'Inativo')+'</span></td>';
+    html += '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalAluno(\''+a.id+'\')">'+icon('edit',14)+'</button>';
+    if(isFull()) html += ' <button class="btn btn-danger btn-sm" onclick="excluirAluno(\''+a.id+'\')">'+icon('trash',14)+'</button>';
+    html += '</td></tr>';
   });
-  const max = Math.max(...valores,1);
-  const w=560,h=200,padL=46,padB=26,padT=14,padR=12;
-  const iw=w-padL-padR, ih=h-padT-padB;
-  let grid='';
-  for(let i=0;i<=4;i++){
-    const y=padT+ih*i/4;
-    const val=Math.round(max*(4-i)/4);
-    grid+='<line class="grid-line" x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" 
+  if(!filtrados.length) html += '<tr><td colspan="8" style="text-align:center;color:var(--muted)">Nenhum aluno encontrado.</td></tr>';
+  html += '</tbody></table></div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+function exportarAlunosCompletoCSV(){
+  const alunos = DB.get('alunos')||[];
+  let csv = 'Nome;CPF;Email;Celular;Nascimento;Idade;Faixa;Graus;Status;ValorMensalidade;Adimplencia\n';
+  alunos.forEach(a=>{
+    const fin = situacaoFinanceiraAluno(a.id);
+    csv += a.nome+';'+(a.cpf||'')+';'+(a.email||'')+';'+(a.celular||'')+';'+(a.nascimento||'')+';'+(idadeDe(a.nascimento)!=null?idadeDe(a.nascimento):'')+';'+a.faixa+';'+a.graus+';'+(a.ativo?'Ativo':'Inativo')+';'+(fin.proxima?fin.proxima.valor:'')+';'+(fin.inad?'Inadimplente':'Adimplente')+'\n';
+  });
+  downloadCSV(csv, 'lista_alunos_'+hojeISO()+'.csv');
+  toast('Lista de alunos exportada.','ok');
+}
+function modalAluno(id){
+  const alunos = DB.get('alunos')||[];
+  const a = id? alunos.find(x=>x.id===id) : null;
+  const editando = !!a;
+  openModal(
+    '<h3>'+(editando?'Editar Aluno':'Novo Aluno')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+
+    '<div class="avatar-upload"><div class="big" id="alFotoPrev">'+(a&&a.foto?'<img src="'+a.foto+'">':(a?esc(a.nome.charAt(0)):'+'))+'</div><div class="avatar-actions"><button class="btn btn-ghost btn-sm" onclick="uploadFoto(\'alFoto\',\'alFotoPrev\')">'+icon('camera',14)+' Galeria / Câmera</button></div></div>'+
+    '<input type="hidden" id="alFoto">'+
+    '<div class="form-grid">'+
+    '<div class="field full"><label>Nome completo *</label><input id="alNome" value="'+esc(a?a.nome:'')+'"></div>'+
+    '<div class="field"><label>CPF * (único, readonly após salvar)</label><input id="alCpf" value="'+esc(a?a.cpf:'')+'" '+(editando?'readonly':'')+' placeholder="000.000.000-00" oninput="this.value=maskCPF(this.value)"></div>'+
+    '<div class="field"><label>Data de nascimento</label><input type="date" id="alNasc" value="'+esc(a?a.nascimento:'')+'"></div>'+
+    '<div class="field"><label>Celular (somente celular)</label><input id="alCel" value="'+esc(a?a.celular:'')+'" placeholder="(XX) XXXXX-XXXX" oninput="this.value=maskCelular(this.value)"></div>'+
+    '<div class="field"><label>E-mail</label><input id="alEmail" type="email" value="'+esc(a?a.email:'')+'"></div>'+
+    '<div class="field"><label>Faixa</label><select id="alFaixa">'+Object.keys(FAIXAS_IBJJF).map(f=>'<option value="'+f+'"'+(a&&a.faixa===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>Graus</label><select id="alGraus">'+[0,1,2,3,4].map(g=>'<option value="'+g+'"'+(a&&Number(a.graus)===g?' selected':'')+'>'+g+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>Status</label><select id="alAtivo"><option value="1"'+(a&&a.ativo?' selected':'')+'>Ativo</option><option value="0"'+(a&&!a.ativo?' selected':'')+'>Inativo</option></select></div>'+
+    '<div class="field"><label>Nota / Observação</label><input id="alNota" value="'+esc(a?a.nota:'')+'"></div>'+
+    '</div>' +
+    '<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarAluno(\''+(id||'')+'\')">Salvar</button></div>'
+  );
+  if(a&&a.foto) document.getElementById('alFoto').value = a.foto;
+}
+function uploadFoto(inputId, prevId){
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  inp.onchange = ()=>{
+    const file = inp.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      document.getElementById(inputId).value = e.target.result;
+      const prev = document.getElementById(prevId);
+      prev.innerHTML = '<img src="'+e.target.result+'" alt="">';
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+function salvarAluno(id){
+  const alunos = DB.get('alunos')||[];
+  const users = DB.get('users')||[];
+  const nome = document.getElementById('alNome').value.trim();
+  const cpf = (document.getElementById('alCpf').value||'').replace(/\D/g,'');
+  const celular = document.getElementById('alCel').value;
+  const email = document.getElementById('alEmail').value.trim();
+  const nascimento = document.getElementById('alNasc').value;
+  const faixa = document.getElementById('alFaixa').value;
+  const graus = Number(document.getElementById('alGraus').value);
+  const ativo = document.getElementById('alAtivo').value==='1';
+  const nota = document.getElementById('alNota').value.trim();
+  const foto = document.getElementById('alFoto').value;
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  if(!id && !validarCPF(cpf)){ toast('CPF inválido.','warn'); return; }
+  if(celular && !celularValido(celular)){ toast('Celular inválido. Use (XX) XXXXX-XXXX, somente celular.','warn'); return; }
+  if(!id && alunos.some(a=>a.cpf && a.cpf.replace(/\D/g,'')===cpf)){ toast('CPF já cadastrado no sistema.','danger'); return; }
+  if(id){
+    const a = alunos.find(x=>x.id===id);
+    Object.assign(a, {nome, celular, email, nascimento, faixa, graus, ativo, nota, foto});
+    DB.set('alunos', alunos);
+    const u = users.find(x=>x.alunoId===id);
+    if(u){ u.nome=nome; u.email=email; u.foto=foto; DB.set('users', users); }
+    toast('Aluno atualizado.','ok');
+  } else {
+    if(users.some(x=>x.login===cpf)){ toast('Já existe usuário com este CPF.','danger'); return; }
+    const novo = {id:uid(), nome, cpf, email, celular, nascimento, faixa, graus, ativo, foto, dependentes:[], dependenteDe:'', nota};
+    alunos.push(novo);
+    DB.set('alunos', alunos);
+    users.push({id:uid(), login:cpf, nome, senha:'123456', perfil:'Aluno', cpf, email, foto, alunoId:novo.id, ativo:true});
+    DB.set('users', users);
+    toast('Aluno cadastrado. Usuário criado: login='+cpf+' / senha=123456','ok');
+  }
+  closeModal();
+  renderAlunos();
+}
+function excluirAluno(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir este aluno? Esta ação não pode ser desfeita.')) return;
+  DB.set('alunos', (DB.get('alunos')||[]).filter(a=>a.id!==id));
+  toast('Aluno excluído.');
+  renderAlunos();
+}
+
+/* ============ USUÁRIOS (Professor Líder) ============ */
+function renderUsuarios(){
+  if(!isFull()) return;
+  setTitle('Usuários','Gerenciar acessos ao sistema');
+  const users = DB.get('users')||[];
+  const alunos = DB.get('alunos')||[];
+  let html = '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalUsuario()">'+icon('plus')+' Novo Usuário</button></div>';
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Login</th><th>Perfil</th><th>E-mail</th><th>Vínculo</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  users.forEach(u=>{
+    const al = u.alunoId ? alunos.find(a=>a.id===u.alunoId) : null;
+    const isSelf = u.id===Session.get().id;
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(u.foto,u.nome)+'<b>'+esc(u.nome)+'</b>'+(isSelf?' <span class="tag tag-gold">você</span>':'')+'</div></td>'
+      +'<td>'+esc(u.login)+'</td>'
+      +'<td><span class="tag tag-blue">'+esc(u.perfil)+'</span></td>'
+      +'<td>'+esc(u.email||'-')+'</td>'
+      +'<td>'+esc(al?al.nome:'-')+'</td>'
+      +'<td><span class="tag '+(u.ativo===false?'tag-danger':'tag-ok')+'">'+(u.ativo===false?'Inativo':'Ativo')+'</span></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalUsuario(\''+u.id+'\')">'+icon('edit',14)+'</button>'
+      +(!isSelf?' <button class="btn btn-danger btn-sm" onclick="excluirUsuario(\''+u.id+'\')">'+icon('trash',14)+'</button>':'')
+      +'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalUsuario(id){
+  const users = DB.get('users')||[];
+  const u = id? users.find(x=>x.id===id) : null;
+  const alunos = DB.get('alunos')||[];
+  const perfis = ['ADM','Professor Líder','Professor','Aluno'];
+  openModal('<h3>'+(u?'Editar Usuário':'Novo Usuário')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Nome *</label><input id="usNome" value="'+esc(u?u.nome:'')+'"></div>'
+  +'<div class="field"><label>Login *</label><input id="usLogin" value="'+esc(u?u.login:'')+'" '+(u?'readonly':'')+'></div>'
+  +'<div class="field"><label>Senha *</label><input id="usSenha" type="password" value="'+(u?u.senha:'')+'" placeholder="'+(u?'Deixe para manter a atual':'123456')+'"></div>'
+  +'<div class="field"><label>Perfil</label><select id="usPerfil">'+perfis.map(p=>'<option value="'+p+'"'+(u&&u.perfil===p?' selected':'')+'>'+p+'</option>').join('')+'</select></div>'
+  +'<div class="field"><label>E-mail</label><input id="usEmail" type="email" value="'+esc(u?u.email:'')+'"></div>'
+  +'<div class="field"><label>Status</label><select id="usAtivo"><option value="1"'+(u&&u.ativo!==false?' selected':'')+'>Ativo</option><option value="0"'+(u&&u.ativo===false?' selected':'')+'>Inativo</option></select></div>'
+  +'<div class="field full" id="usAlunoWrap" style="display:'+((u&&u.perfil==='Aluno')||!u?'block':'none')+'"><label>Aluno vinculado (perfil Aluno)</label><select id="usAluno"><option value="">Selecione...</option>'+alunos.map(a=>'<option value="'+a.id+'"'+(u&&u.alunoId===a.id?' selected':'')+'>'+esc(a.nome)+'</option>').join('')+'</select></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarUsuario(\''+(id||'')+'\')">Salvar</button></div>');
+  document.getElementById('usPerfil').addEventListener('change', e=>{
+    document.getElementById('usAlunoWrap').style.display = e.target.value==='Aluno' ? 'block' : 'none';
+  });
+}
+function salvarUsuario(id){
+  const users = DB.get('users')||[];
+  const nome = document.getElementById('usNome').value.trim();
+  const login = document.getElementById('usLogin').value.trim().toLowerCase();
+  const senha = document.getElementById('usSenha').value;
+  const perfil = document.getElementById('usPerfil').value;
+  const email = document.getElementById('usEmail').value.trim();
+  const ativo = document.getElementById('usAtivo').value==='1';
+  const alunoId = perfil==='Aluno' ? document.getElementById('usAluno').value : null;
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  if(!id && !login){ toast('Informe o login.','warn'); return; }
+  if(!id && users.some(x=>x.login===login)){ toast('Login já existe.','danger'); return; }
+  if(perfil==='Aluno' && !alunoId){ toast('Selecione o aluno vinculado.','warn'); return; }
+  if(id){
+    const u = users.find(x=>x.id===id);
+    u.nome=nome; u.email=email; u.perfil=perfil; u.ativo=ativo;
+    if(senha) u.senha=senha;
+    if(perfil==='Aluno'){ u.alunoId=alunoId; const al=(DB.get('alunos')||[]).find(a=>a.id===alunoId); if(al){ u.cpf=al.cpf; u.nome=al.nome; } }
+    else { u.alunoId=null; u.cpf=null; }
+    DB.set('users', users);
+    if(u.id===Session.get().id) Session.set(u);
+    toast('Usuário atualizado.','ok');
+  } else {
+    users.push({id:uid(), login, nome, senha: senha||'123456', perfil, email, foto:'', alunoId, cpf:null, ativo});
+    DB.set('users', users);
+    toast('Usuário criado.','ok');
+  }
+  closeModal(); renderUsuarios();
+}
+function excluirUsuario(id){
+  if(!isFull()) return;
+  const users = DB.get('users')||[];
+  const u = users.find(x=>x.id===id);
+  if(!u) return;
+  if(u.id===Session.get().id){ toast('Você não pode excluir o próprio usuário.','warn'); return; }
+  if(u.login==='admin'){ toast('O usuário admin não pode ser excluído.','warn'); return; }
+  if(!confirm('Excluir o usuário '+u.nome+'?')) return;
+  DB.set('users', users.filter(x=>x.id!==id));
+  toast('Usuário excluído.'); renderUsuarios();
+}
+
+/* ============ PROFESSORES ============ */
+function renderProfessores(){
+  if(!isFull()) return;
+  setTitle('Professores','Cadastro e especialidades');
+  const profs = DB.get('professores')||[];
+  let html = '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalProfessor()">'+icon('plus')+' Novo Professor</button></div>';
+  html += '<div class="grid grid-3">';
+  profs.forEach(p=>{
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
+    +'<div class="avatar" style="width:48px;height:48px;font-size:18px">'+avHtml(p.foto,p.nome)+'</div>'
+    +'<div><b>'+esc(p.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(p.especialidade||'')+'</div></div></div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.8">'+icon('users',13)+' '+esc(p.cref||'-')+'<br>'+icon('alunos',13)+' '+esc(p.celular||'-')+'<br>'+icon('perfil',13)+' '+esc(p.email||'-')+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="modalProfessor(\''+p.id+'\')">'+icon('edit',14)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirProfessor(\''+p.id+'\')">'+icon('trash',14)+'</button></div></div>';
+  });
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalProfessor(id){
+  const profs = DB.get('professores')||[];
+  const p = id? profs.find(x=>x.id===id):null;
+  openModal('<h3>'+(p?'Editar Professor':'Novo Professor')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+
+  '<div class="form-grid">'+
+  '<div class="field full"><label>Nome *</label><input id="pfNome" value="'+esc(p?p.nome:'')+'"></div>'+
+  '<div class="field"><label>CPF</label><input id="pfCpf" value="'+esc(p?p.cpf:'')+'" oninput="this.value=maskCPF(this.value)"></div>'+
+  '<div class="field"><label>Celular</label><input id="pfCel" value="'+esc(p?p.celular:'')+'" oninput="this.value=maskCelular(this.value)"></div>'+
+  '<div class="field"><label>E-mail</label><input id="pfEmail" type="email" value="'+esc(p?p.email:'')+'"></div>'+
+  '<div class="field"><label>Especialidade</label><input id="pfEsp" value="'+esc(p?p.especialidade:'')+'"></div>'+
+  '<div class="field"><label>CREF</label><input id="pfCref" value="'+esc(p?p.cref:'')+'"></div>'+
+  '<div class="field"><label>Status</label><select id="pfAtivo"><option value="1"'+(p&&p.ativo?' selected':'')+'>Ativo</option><option value="0"'+(p&&!p.ativo?' selected':'')+'>Inativo</option></select></div>'+
+  '</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarProfessor(\''+(id||'')+'\')">Salvar</button></div>');
+}
+function salvarProfessor(id){
+  const profs = DB.get('professores')||[];
+  const nome = document.getElementById('pfNome').value.trim();
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  const dados = { nome, cpf:(document.getElementById('pfCpf').value||'').replace(/\D/g,''), celular:document.getElementById('pfCel').value, email:document.getElementById('pfEmail').value.trim(), especialidade:document.getElementById('pfEsp').value.trim(), cref:document.getElementById('pfCref').value.trim(), ativo:document.getElementById('pfAtivo').value==='1' };
+  if(id){ Object.assign(profs.find(x=>x.id===id), dados); DB.set('professores', profs); toast('Professor atualizado.','ok'); }
+  else { profs.push({id:uid(), ...dados}); DB.set('professores', profs); toast('Professor cadastrado.','ok'); }
+  closeModal(); renderProfessores();
+}
+function excluirProfessor(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir professor?')) return;
+  DB.set('professores', (DB.get('professores')||[]).filter(p=>p.id!==id));
+  toast('Professor excluído.'); renderProfessores();
+}
+
+/* ============ TURMAS ============ */
+function renderTurmas(){
+  setTitle('Turmas e Horários','Agendamento e capacidade');
+  const turmas = DB.get('turmas')||[];
+  const profs = DB.get('professores')||[];
+  const ags = DB.get('agendamentos')||[];
+  const hoje = hojeISO();
+  let html = '';
+  if(isStaff()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalTurma()">'+icon('plus')+' Nova Turma</button></div>';
+  html += '<div class="grid grid-2">';
+  turmas.forEach(t=>{
+    const prof = profs.find(p=>p.id===t.professor);
+    const agsHoje = ags.filter(a=>a.turmaId===t.id && a.data===hoje);
+    const pct = Math.min(100, Math.round((agsHoje.length/t.vagas)*100));
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
+    +'<span class="belt-bar" style="width:8px;height:44px;border-radius:4px;background:'+(t.cor||'#e94560')+'"></span>'
+    +'<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+DIA_NOME[t.dia]+' • '+esc(t.hora)+' • '+t.duracao+'min</div></div>'
+    +(isStaff()?'<button class="btn btn-ghost btn-sm" onclick="modalTurma(\''+t.id+'\')">'+icon('edit',14)+'</button>':'')
+    +'</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">Professor: '+esc(prof?prof.nome:'-')+'</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Agendados hoje</span><span>'+agsHoje.length+'/'+t.vagas+'</span></div>'
+    +'<div style="height:8px;background:var(--card2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(pct>=100?'var(--danger)':'var(--primary)')+'"></div></div>'
+    +'</div>';
+  });
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalTurma(id){
+  const turmas = DB.get('turmas')||[];
+  const t = id? turmas.find(x=>x.id===id):null;
+  const profs = DB.get('professores')||[];
+  openModal('<h3>'+(t?'Editar Turma':'Nova Turma')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+
+  '<div class="form-grid">'+
+  '<div class="field full"><label>Nome da turma *</label><input id="tmNome" value="'+esc(t?t.nome:'')+'"></div>'+
+  '<div class="field"><label>Professor</label><select id="tmProf">'+profs.map(p=>'<option value="'+p.id+'"'+(t&&t.professor===p.id?' selected':'')+'>'+esc(p.nome)+'</option>').join('')+'</select></div>'+
+  '<div class="field"><label>Dia da semana</label><select id="tmDia">'+DIA_NOME.map((d,i)=>'<option value="'+i+'"'+(t&&t.dia===i?' selected':'')+'>'+d+'</option>').join('')+'</select></div>'+
+  '<div class="field"><label>Horário</label><input type="time" id="tmHora" value="'+esc(t?t.hora:'19:00')+'"></div>'+
+  '<div class="field"><label>Duração (min)</label><input type="number" id="tmDur" value="'+(t?t.duracao:60)+'"></div>'+
+  '<div class="field"><label>Vagas</label><input type="number" id="tmVagas" value="'+(t?t.vagas:20)+'"></div>'+
+  '<div class="field"><label>Cor</label><div class="color-input"><input type="color" id="tmCor" value="'+(t?t.cor:'#e94560')+'"><span id="tmCorTxt">'+(t?t.cor:'#e94560')+'</span></div></div>'+
+  '</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarTurma(\''+(id||'')+'\')">Salvar</button></div>');
+  document.getElementById('tmCor').addEventListener('input', e=>document.getElementById('tmCorTxt').textContent=e.target.value);
+}
+function salvarTurma(id){
+  const turmas = DB.get('turmas')||[];
+  const nome = document.getElementById('tmNome').value.trim();
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  const dados = { nome, professor:document.getElementById('tmProf').value, dia:Number(document.getElementById('tmDia').value), hora:document.getElementById('tmHora').value, duracao:Number(document.getElementById('tmDur').value), vagas:Number(document.getElementById('tmVagas').value), cor:document.getElementById('tmCor').value };
+  if(id){ Object.assign(turmas.find(x=>x.id===id), dados); DB.set('turmas', turmas); toast('Turma atualizada.','ok'); }
+  else { turmas.push({id:uid(), ...dados}); DB.set('turmas', turmas); toast('Turma criada.','ok'); }
+  closeModal(); renderTurmas();
+}
+
+/* ============ PRESENÇAS ============ */
+let presTab = 'chamada';
+let freqPeriodo = '30d';
+let freqTurma = 'todas';
+function renderPresencas(){
+  if(!isStaff()) return;
+  setTitle('Presenças','Chamada e frequência por aluno');
+  let html = '<div class="tabs">'
+  +'<button class="tab'+(presTab==='chamada'?' active':'')+'" onclick="presTab=\'chamada\';renderPresencas()">'+icon('calendar',15)+' Chamada do Dia</button>'
+  +'<button class="tab'+(presTab==='frequencia'?' active':'')+'" onclick="presTab=\'frequencia\';renderPresencas()">'+icon('presencas',15)+' Frequência por Aluno</button>'
+  +'</div><div id="presBody"></div>';
+  document.getElementById('content').innerHTML = html;
+  if(presTab==='chamada') renderChamadaBody(); else renderFrequenciaBody();
+}
+function renderChamadaBody(){
+  const body = document.getElementById('presBody');
+  const turmas = DB.get('turmas')||[];
+  const hoje = hojeISO();
+  let html = '<div class="card"><h3>'+icon('calendar')+'Chamada do Dia - '+fmtData(hoje)+'</h3>';
+  html += '<div class="row" style="margin-bottom:14px"><div class="field" style="max-width:300px"><label>Turma</label><select id="chamadaTurma" onchange="renderChamada()"><option value="">Selecione a turma</option>'+turmas.map(t=>'<option value="'+t.id+'">'+esc(t.nome)+' - '+DIA_NOME[t.dia]+' '+esc(t.hora)+'</option>').join('')+'</select></div></div>';
+  html += '<div id="chamadaBody"></div></div>';
+  body.innerHTML = html;
+  renderChamada();
+}
+function renderChamada(){
+  const tid = document.getElementById('chamadaTurma').value;
+  const body = document.getElementById('chamadaBody');
+  if(!tid){ body.innerHTML='<p style="color:var(--muted);font-size:13px">Selecione uma turma para iniciar a chamada.</p>'; return; }
+  const alunos = DB.get('alunos')||[];
+  const presencas = DB.get('presencas')||[];
+  const hoje = hojeISO();
+  const presosHoje = presencas.filter(p=>p.turmaId===tid && p.data===hoje);
+  let html = '<div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Presente</th></tr></thead><tbody>';
+  alunos.filter(a=>a.ativo).forEach(a=>{
+    const f = faixaInfo(a);
+    const pr = presosHoje.find(p=>p.alunoId===a.id);
+    const presente = pr? pr.presente : false;
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td><td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td><td><button class="btn '+(presente?'btn-ok':'btn-ghost')+' btn-sm" onclick="togglePresenca(\''+a.id+'\',\''+tid+'\')">'+icon('check',14)+' '+(presente?'Presente':'Marcar')+'</button></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div style="margin-top:14px"><button class="btn btn-gold" onclick="exportarPresencas(\''+tid+'\')">'+icon('download')+' Exportar CSV</button></div>';
+  body.innerHTML = html;
+}
+function togglePresenca(alunoId, turmaId){
+  const presencas = DB.get('presencas')||[];
+  const hoje = hojeISO();
+  const idx = presencas.findIndex(p=>p.alunoId===alunoId && p.turmaId===turmaId && p.data===hoje);
+  if(idx>=0){ presencas[idx].presente = !presencas[idx].presente; }
+  else { presencas.push({id:uid(), alunoId, turmaId, data:hoje, presente:true}); }
+  DB.set('presencas', presencas);
+  renderChamada();
+}
+function renderFrequenciaBody(){
+  const body = document.getElementById('presBody');
+  const turmas = DB.get('turmas')||[];
+  const presencas = DB.get('presencas')||[];
+  const alunos = DB.get('alunos')||[];
+  const corte = cortePeriodo(freqPeriodo);
+  let html = '<div class="toolbar-row">'
+  +'<div class="field"><label>Período</label><select onchange="freqPeriodo=this.value;renderFrequenciaBody()">'
+  +'<option value="7d"'+(freqPeriodo==='7d'?' selected':'')+'>Últimos 7 dias</option>'
+  +'<option value="30d"'+(freqPeriodo==='30d'?' selected':'')+'>Últimos 30 dias</option>'
+  +'<option value="90d"'+(freqPeriodo==='90d'?' selected':'')+'>Últimos 90 dias</option>'
+  +'<option value="todos"'+(freqPeriodo==='todos'?' selected':'')+'>Todo o histórico</option>'
+  +'</select></div>'
+  +'<div class="field"><label>Turma</label><select onchange="freqTurma=this.value;renderFrequenciaBody()"><option value="todas"'+(freqTurma==='todas'?' selected':'')+'>Todas</option>'+turmas.map(t=>'<option value="'+t.id+'"'+(freqTurma===t.id?' selected':'')+'>'+esc(t.nome)+'</option>').join('')+'</select></div>'
+  +'</div>';
+  const regs = presencas.filter(p=>p.data>=corte && (freqTurma==='todas'||p.turmaId===freqTurma));
+  const linhas = alunos.filter(a=>a.ativo).map(a=>{
+    const r = regs.filter(p=>p.alunoId===a.id);
+    const pres = r.filter(p=>p.presente).length;
+    const faltas = r.length-pres;
+    const taxa = r.length?Math.round(pres/r.length*100):0;
+    return {a, pres, faltas, total:r.length, taxa};
+  }).filter(x=>x.total>0).sort((x,y)=>y.taxa-x.taxa||y.pres-x.pres);
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Presenças</th><th>Faltas</th><th>Total</th><th>Taxa</th></tr></thead><tbody>';
+  if(!linhas.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhuma frequência registrada no período.</td></tr>';
+  linhas.forEach(l=>{
+    const f = faixaInfo(l.a);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(l.a.foto,l.a.nome)+'<b>'+esc(l.a.nome)+'</b></div></td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(l.a.faixa)+'</span></td>'
+    +'<td>'+l.pres+'</td><td>'+l.faltas+'</td><td>'+l.total+'</td>'
+    +'<td style="min-width:160px"><div style="display:flex;align-items:center;gap:8px"><div class="freq-track" style="flex:1"><div class="freq-fill" style="width:'+l.taxa+'%"></div></div><b>'+l.taxa+'%</b></div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  body.innerHTML = html;
+}
+function exportarPresencas(turmaId){
+  const alunos = DB.get('alunos')||[];
+  const presencas = DB.get('presencas')||[];
+  const hoje = hojeISO();
+  const turma = (DB.get('turmas')||[]).find(t=>t.id===turmaId);
+  let csv = 'Aluno;CPF;Faixa;Presente\n';
+  alunos.filter(a=>a.ativo).forEach(a=>{
+    const pr = presencas.find(p=>p.alunoId===a.id && p.turmaId===turmaId && p.data===hoje);
+    csv += a.nome+';'+(a.cpf||'')+';'+a.faixa+';'+(pr&&pr.presente?'Sim':'Não')+'\n';
+  });
+  downloadCSV(csv, 'presencas_'+turma.nome.replace(/\s+/g,'_')+'_'+hoje+'.csv');
+}
+function downloadCSV(csv, nome){
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ============ TRILHA / GRADUAÇÃO ============ */
+let trilhaSort = 'nome';
+let trilhaFiltro = 'todas';
+function renderTrilha(){
+  const s = Session.get();
+  if(s.perfil==='Aluno') return renderTrilhaAluno();
+  setTitle('Graduação','Tabela de faixas IBJJF');
+  const alunos = DB.get('alunos')||[];
+  let lista = alunos.slice();
+  if(trilhaFiltro!=='todas') lista = lista.filter(a=>a.faixa===trilhaFiltro);
+  if(trilhaSort==='nome') lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else lista.sort((a,b)=>(FAIXA_ORDEM.indexOf(a.faixa)-FAIXA_ORDEM.indexOf(b.faixa))||a.nome.localeCompare(b.nome,'pt-BR'));
+  let html = '<div class="toolbar-row">'
+  +'<div class="field"><label>Ordenar por</label><select onchange="trilhaSort=this.value;renderTrilha()"><option value="nome"'+(trilhaSort==='nome'?' selected':'')+'>Ordem alfabética</option><option value="faixa"'+(trilhaSort==='faixa'?' selected':'')+'>Cor da faixa</option></select></div>'
+  +'<div class="field"><label>Filtrar por faixa</label><select onchange="trilhaFiltro=this.value;renderTrilha()"><option value="todas"'+(trilhaFiltro==='todas'?' selected':'')+'>Todas as faixas</option>'+FAIXA_ORDEM.map(f=>'<option value="'+f+'"'+(trilhaFiltro===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'
+  +'</div>';
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Faixa</th><th>Graus</th><th>Idade</th><th>Próxima Faixa</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!lista.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhum aluno encontrado.</td></tr>';
+  lista.forEach(a=>{
+    const f = faixaInfo(a);
+    const idade = idadeDe(a.nascimento);
+    const prox = proximaFaixa(a.faixa, idade);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>'
+    +'<td>'+f.graus+'</td>'
+    +'<td>'+(idade!=null?idade+' anos':'não informada')+'</td>'
+    +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+'"></span>'+esc(prox||'-')+'</span></td>'
+    +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalGraduar(\''+a.id+'\')">'+icon('award',14)+' Graduar</button> <button class="btn btn-ghost btn-sm" onclick="goTrilhaAluno(\''+a.id+'\')">'+icon('eye',14)+' Ver trilha</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  html += '<div class="card"><h3>'+icon('trilha')+'Cores das Faixas (IBJJF)</h3><div class="chart-legend">'+FAIXA_ORDEM.map(f=>'<span class="lg"><span class="dot" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span>').join('')+'</div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+function proximaFaixa(faixa, idade){
+  if(FAIXAS_INFANTIS.includes(faixa)){
+    const i = FAIXAS_INFANTIS.indexOf(faixa);
+    if(i<FAIXAS_INFANTIS.length-1) return FAIXAS_INFANTIS[i+1];
+    return idade!=null && idade>=16 ? 'Azul' : null;
+  }
+  const i = FAIXAS_ADULTAS.indexOf(faixa);
+  if(i<FAIXAS_ADULTAS.length-1) return FAIXAS_ADULTAS[i+1];
+  return null;
+}
+function modalGraduar(alunoId){
+  const a = (DB.get('alunos')||[]).find(x=>x.id===alunoId);
+  const idade = idadeDe(a.nascimento);
+  const prox = proximaFaixa(a.faixa, idade);
+  let aviso = '';
+  if(prox && idade!=null && idade < FAIXAS_IBJJF[prox].min){
+    aviso = '<div class="alert alert-warn">'+icon('warn')+'<div>Idade mínima para a faixa <b>'+prox+'</b> é '+FAIXAS_IBJJF[prox].min+' anos. O aluno tem '+idade+' anos. A graduação não será bloqueada, mas pode confirmar mesmo assim.</div></div>';
+  }
+  openModal('<h3>Graduar - '+esc(a.nome)+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +aviso
+  +'<div class="form-grid">'
+  +'<div class="field"><label>Faixa atual</label><input value="'+esc(a.faixa)+'" readonly></div>'
+  +'<div class="field"><label>Nova faixa</label><select id="grFaixa">'+Object.keys(FAIXAS_IBJJF).map(f=>'<option value="'+f+'"'+(prox===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'
+  +'<div class="field"><label>Tipo</label><select id="grTipo"><option value="faixa">Promoção de faixa</option><option value="grau">Grau</option></select></div>'
+  +'<div class="field"><label>Observação</label><input id="grObs" placeholder="Examinho, tempo de treino..."></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarGraduacao(\''+alunoId+'\')">Confirmar Graduação</button></div>');
+}
+function salvarGraduacao(alunoId){
+  const alunos = DB.get('alunos')||[];
+  const trilha = DB.get('trilha')||[];
+  const a = alunos.find(x=>x.id===alunoId);
+  const nova = document.getElementById('grFaixa').value;
+  const tipo = document.getElementById('grTipo').value;
+  const obs = document.getElementById('grObs').value.trim();
+  const antiga = a.faixa;
+  if(tipo==='faixa'){
+    if(nova===antiga){ toast('Selecione uma faixa diferente.','warn'); return; }
+    trilha.push({id:uid(), alunoId, data:hojeISO(), tipo:'faixa', de:antiga, para:nova, obs});
+    a.faixa = nova; a.graus = 0;
+  } else {
+    const g = Number(a.graus||0);
+    trilha.push({id:uid(), alunoId, data:hojeISO(), tipo:'grau', de:String(g), para:String(g+1), obs});
+    a.graus = g+1;
+  }
+  DB.set('alunos', alunos);
+  DB.set('trilha', trilha);
+  toast('Graduação registrada!','ok');
+  closeModal(); renderTrilha();
+}
+function renderTrilhaAluno(){
+  const al = alunoAtual();
+  setTitle('Minha Graduação','Trilha IBJJF');
+  const f = faixaInfo(al);
+  const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data));
+  const idade = idadeDe(al.nascimento);
+  const prox = proximaFaixa(al.faixa, idade);
+  let html = '<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap">'
+  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+f.hex+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(al.faixa)+'</div><div style="color:var(--muted);font-size:13px">'+f.graus+' grau(s)</div></div>'
+  +'<div style="color:var(--muted)">'+icon('trilha',26)+'</div>'
+  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(prox||'-')+'</div><div style="color:var(--muted);font-size:13px">Próxima faixa</div></div>'
+  +'</div></div>';
+  html += '<div class="card"><h3>'+icon('trilha')+'Linha do Tempo</h3><div class="timeline">';
+  if(!trilha.length) html += '<p style="color:var(--muted);font-size:13px">Nenhum registro de graduação ainda.</p>';
+  trilha.forEach(t=>{
+    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
+    html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
+  });
+  html += '</div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+function goTrilhaAluno(id){
+  current.view='trilha';
+  renderNav();
+  const al = (DB.get('alunos')||[]).find(a=>a.id===id);
+  setTitle('Trilha - '+al.nome,'Graduação IBJJF');
+  const f = faixaInfo(al);
+  const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===id).sort((a,b)=>b.data.localeCompare(a.data));
+  let html = '<div class="card" style="text-align:center"><span class="belt-chip"><span class="belt-bar" style="width:22px;height:22px;background:'+f.hex+'"></span>'+esc(al.faixa)+' • '+f.graus+' grau(s)</span></div>';
+  html += '<div class="card"><h3>'+icon('trilha')+'Linha do Tempo</h3><div class="timeline">';
+  if(!trilha.length) html += '<p style="color:var(--muted)">Nenhum registro.</p>';
+  trilha.forEach(t=>{
+    const titulo = t.tipo==='faixa' ? 'Promoção: '+t.de+' -> '+t.para : 'Grau '+t.de+' -> '+t.para;
+    html += '<div class="tl-item"><div class="tl-date">'+fmtData(t.data)+'</div><div class="tl-title">'+esc(titulo)+'</div><div class="tl-desc">'+esc(t.obs||'')+'</div></div>';
+  });
+  html += '</div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+/* ============ CERTIFICADOS ============ */
+function renderCertificados(){
+  const s = Session.get();
+  setTitle('Certificados','Prévia e emissão com token QR');
+  const certs = DB.get('certificados')||[];
+  let html = '';
+  if(isStaff()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalCertificado()">'+icon('plus')+' Emitir Certificado</button></div>';
+  html += '<div class="grid grid-2">';
+  certs.filter(c=> s.perfil==='Aluno' ? c.alunoId===currentAlunoId() : true).forEach(c=>{
+    const al = (DB.get('alunos')||[]).find(a=>a.id===c.alunoId);
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+icon('certificados',28)+'<div><b>'+esc(c.titulo)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(al?al.nome:'-')+' • '+fmtData(c.data)+'</div></div></div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Token: <code>'+esc(c.token)+'</code></div>'
+    +'<div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="previewCertificado(\''+c.id+'\')">'+icon('eye',14)+' Prévia</button><button class="btn btn-gold btn-sm" onclick="emitirCertificado(\''+c.id+'\')">'+icon('download',14)+' Emitir</button></div></div>';
+  });
+  if(!certs.length) html = '<div class="alert alert-info">'+icon('info')+'<div>Nenhum certificado emitido.</div></div>';
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalCertificado(){
+  const alunos = DB.get('alunos')||[];
+  openModal('<h3>Emitir Certificado<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Aluno</label><select id="ceAluno">'+alunos.map(a=>'<option value="'+a.id+'">'+esc(a.nome)+'</option>').join('')+'</select></div>'
+  +'<div class="field full"><label>Título</label><input id="ceTitulo" placeholder="Ex.: Faixa Azul"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarCertificado()">Emitir</button></div>');
+}
+function salvarCertificado(){
+  const certs = DB.get('certificados')||[];
+  const alunoId = document.getElementById('ceAluno').value;
+  const titulo = document.getElementById('ceTitulo').value.trim();
+  if(!titulo){ toast('Informe o título.','warn'); return; }
+  const token = 'CERT-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  certs.push({id:uid(), alunoId, titulo, data:hojeISO(), token, emissor:Session.get().nome});
+  DB.set('certificados', certs);
+  toast('Certificado emitido.','ok');
+  closeModal(); renderCertificados();
+}
+function previewCertificado(id){
+  const c = (DB.get('certificados')||[]).find(x=>x.id===id);
+  const al = (DB.get('alunos')||[]).find(a=>a.id===c.alunoId);
+  openModal(certificadoHTML(c, al));
+}
+function certificadoHTML(c, al){
+  const cfg = DB.get('config')||{};
+  return '<div style="text-align:center;padding:30px;border:3px double var(--secondary);border-radius:14px">'
+  +'<div style="font-size:12px;letter-spacing:3px;color:var(--muted)">'+esc((cfg.academyName||'Tatame BJJ').toUpperCase())+'</div>'
+  +'<div style="font-size:30px;font-weight:800;margin:20px 0 6px">CERTIFICADO</div>'
+  +'<div style="color:var(--muted);font-size:13px">Certificamos que</div>'
+  +'<div style="font-size:24px;font-weight:800;color:var(--secondary);margin:10px 0">'+esc(al.nome)+'</div>'
+  +'<div style="color:var(--muted);font-size:13px">foi promovido(a) ao grau de</div>'
+  +'<div style="font-size:20px;font-weight:700;margin:10px 0">'+esc(c.titulo)+'</div>'
+  +'<div style="color:var(--muted);font-size:13px">em '+fmtData(c.data)+'</div>'
+  +'<div style="margin:24px auto 10px;display:inline-flex;align-items:center;gap:10px;background:var(--card2);padding:10px 16px;border-radius:10px">'+icon('qr',22)+'<code style="font-size:12px">'+esc(c.token)+'</code></div>'
+  +'<div style="font-size:11px;color:var(--muted)">'+esc(c.emissor||'')+'</div>'
+  +'<div style="margin-top:18px"><button class="btn btn-gold" onclick="emitirCertificado(\''+c.id+'\')">'+icon('download')+' Baixar Certificado</button></div>'
+  +'</div>';
+}
+function emitirCertificado(id){
+  const c = (DB.get('certificados')||[]).find(x=>x.id===id);
+  const al = (DB.get('alunos')||[]).find(a=>a.id===c.alunoId);
+  const cfg = DB.get('config')||{};
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Certificado - '+esc(c.titulo)+'</title><style>body{font-family:Georgia,serif;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0} .cert{max-width:800px;text-align:center;border:4px double #c9a227;padding:50px;margin:30px}</style></head><body><div class="cert"><div style="font-size:14px;letter-spacing:4px;color:#888">'+esc((cfg.academyName||'Tatame BJJ').toUpperCase())+'</div><h1 style="font-size:42px;margin:30px 0 10px">CERTIFICADO</h1><p style="color:#666">Certificamos que</p><h2 style="font-size:34px;color:#b8860b;margin:16px 0">'+esc(al.nome)+'</h2><p style="color:#666">foi promovido(a) ao grau de</p><h3 style="font-size:26px;margin:14px 0">'+esc(c.titulo)+'</h3><p style="color:#666">em '+fmtData(c.data)+'</p><p style="margin-top:40px;font-size:12px;color:#999">Token de autenticação: '+esc(c.token)+'</p><p style="font-size:13px;color:#666">'+esc(c.emissor||'')+'</p></div></body></html>';
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'certificado_'+al.nome.replace(/\s+/g,'_')+'.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Certificado emitido.','ok');
+}
+
+/* ============ LOJA ============ */
+let mpTab = 'produtos';
+function renderMarketplace(){
+  const s = Session.get();
+  if(s.perfil==='Professor'){ go('dashboard'); return; }
+  setTitle('Loja','Produtos, pedidos e rifas');
+  let html = '<div class="tabs">'
+  +'<button class="tab'+(mpTab==='produtos'?' active':'')+'" onclick="mpTab=\'produtos\';renderMarketplace()">'+icon('cart',15)+' Produtos</button>'
+  +'<button class="tab'+(mpTab==='pedidos'?' active':'')+'" onclick="mpTab=\'pedidos\';renderMarketplace()">'+icon('check',15)+' Meus Pedidos</button>'
+  +'<button class="tab'+(mpTab==='rifas'?' active':'')+'" onclick="mpTab=\'rifas\';renderMarketplace()">'+icon('ticket',15)+' Rifas</button>'
+  +'</div>';
+  if(mpTab==='produtos') html += mpProdutos();
+  else if(mpTab==='pedidos') html += mpPedidos();
+  else html += mpRifas();
+  document.getElementById('content').innerHTML = html;
+}
+function mpProdutos(){
+  const s = Session.get();
+  const produtos = (DB.get('produtos')||[]).filter(p=>p.ativo);
+  let html = '';
+  if(s.perfil==='Aluno') html += pixBar();
+  if(isFull()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalProduto()">'+icon('plus')+' Novo Produto</button></div>';
+  html += '<div class="prod-grid">';
+  produtos.forEach(p=>{
+    html += '<div class="prod-card"><div class="prod-img">'+(p.foto?'<img src="'+p.foto+'" alt="">':'<div class="ph">'+icon('image',30)+'<br>Sem foto</div>')+'</div>'
+    +'<div class="prod-body"><h4>'+esc(p.nome)+'</h4><div style="font-size:12px;color:var(--muted)">'+esc(p.desc||'')+'</div>'
+    +'<div class="price">'+money(p.preco)+'</div><div class="stock">Estoque: '+p.estoque+' un.</div>'
+    +(isFull()
+      ? '<div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="modalProduto(\''+p.id+'\')">'+icon('edit',13)+'</button><button class="btn btn-danger btn-sm" onclick="excluirProduto(\''+p.id+'\')">'+icon('trash',13)+'</button></div>'
+      : '<button class="btn btn-primary btn-sm" '+(p.estoque<=0?'disabled':'')+' onclick="adicionarCarrinho(\''+p.id+'\')">'+icon('cart',13)+' Adicionar</button>')
+    +'</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+function mpPedidos(){
+  const s = Session.get();
+  let pedidos;
+  if(s.perfil==='Aluno') pedidos = (DB.get('pedidos')||[]).filter(p=>p.alunoId===currentAlunoId());
+  else pedidos = DB.get('pedidos')||[];
+  let html = '';
+  if(s.perfil==='Aluno') html += pixBar();
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Data</th><th>Itens</th><th>Total</th><th>Status</th></tr></thead><tbody>';
+  if(!pedidos.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhum pedido.</td></tr>';
+  pedidos.forEach(p=>{
+    const itens = p.itens.map(i=>{ const pr=(DB.get('produtos')||[]).find(x=>x.id===i.produtoId); return (pr?pr.nome:'Item')+' x'+i.qtd; }).join(', ');
+    html += '<tr><td>#'+esc(p.id.slice(-5).toUpperCase())+'</td><td>'+fmtData(p.data)+'</td><td style="font-size:13px">'+esc(itens)+'</td><td>'+money(p.total)+'</td><td><span class="tag tag-blue">'+esc(p.status)+'</span></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function mpRifas(){
+  const s = Session.get();
+  const rifas = DB.get('rifas')||[];
+  const bilhetes = DB.get('bilhetes')||[];
+  const agora = Date.now();
+  const limite60 = 60*86400000;
+  const visiveis = rifas.filter(r=>{
+    if(isFull()) return true;
+    if(r.status==='ativa') return true;
+    if(r.status==='sorteada' && r.dataSorteio && (agora - new Date(r.dataSorteio+'T00:00:00').getTime()) < limite60) return true;
+    return false;
+  });
+  let html = '';
+  if(s.perfil==='Aluno') html += pixBar();
+  html += '<div class="grid grid-2">';
+  visiveis.forEach(r=>{
+    const bs = bilhetes.filter(b=>b.rifaId===r.id);
+    const pagos = bs.filter(b=>b.pago);
+    const meus = bs.filter(b=>b.pago && b.alunoId===currentAlunoId());
+    const vencedor = r.vencedor ? bs.find(b=>b.id===r.vencedor) : null;
+    const vencedorAluno = vencedor ? (DB.get('alunos')||[]).find(a=>a.id===vencedor.alunoId) : null;
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<div style="flex:1"><b>'+esc(r.titulo)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(r.premio)+' • Cota: '+money(r.preco)+'</div></div>';
+    html += '<span class="tag '+(r.status==='ativa'?'tag-ok':'tag-warn')+'">'+(r.status==='ativa'?'Ativa':'Sorteada')+'</span></div>';
+    html += '<div class="raffle-grid" style="margin-bottom:12px">';
+    for(let n=1; n<=r.totalBilhetes; n++){
+      const b = bs.find(x=>x.numero===n);
+      let cls='raffle-cell';
+      let onclick='';
+      if(b && b.pago){
+        cls += ' sold';
+        if(meus.some(m=>m.numero===n)) cls += ' mine';
+        if(vencedor && vencedor.numero===n) cls += ' winner';
+      } else if(r.status==='ativa' && s.perfil==='Aluno'){
+        onclick=' onclick="comprarBilhete(\''+r.id+'\','+n+')"';
+      }
+      html += '<div class="'+cls+'"'+onclick+'>'+n+'</div>';
+    }
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center"><span>'+pagos.length+'/'+r.totalBilhetes+' vendidos • Você: '+meus.length+'</span>';
+    if(r.status==='sorteada'){
+      html += '<span class="tag tag-gold">Vencedor: '+esc(vencedorAluno?vencedorAluno.nome:'-')+' (nº '+ (vencedor?vencedor.numero:'-')+')</span>';
+    } else if(isFull() && pagos.length>0){
+      html += '<button class="btn btn-gold btn-sm" onclick="sortearRifa(\''+r.id+'\')">'+icon('gift',13)+' Sortear</button>';
+    }
+    html += '</div>';
+    if(isFull()){
+      html += '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="modalRifa(\''+r.id+'\')">'+icon('edit',13)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirRifa(\''+r.id+'\')">'+icon('trash',13)+' Excluir</button></div>';
+    }
+    html += '</div>';
+  });
+  if(!visiveis.length) html = '<div class="alert alert-info">'+icon('info')+'<div>Nenhuma rifa disponível.</div></div>';
+  if(isFull()) html += '<div class="card" style="text-align:center"><button class="btn btn-primary" onclick="modalRifa()">'+icon('plus')+' Nova Rifa</button></div>';
+  html += '</div>';
+  return html;
+}
+function adicionarCarrinho(produtoId){
+  const al = alunoAtual();
+  const produtos = DB.get('produtos')||[];
+  const p = produtos.find(x=>x.id===produtoId);
+  if(!p || p.estoque<=0){ toast('Produto sem estoque.','warn'); return; }
+  const pedidos = DB.get('pedidos')||[];
+  pedidos.push({id:uid(), alunoId:al.id, itens:[{produtoId, qtd:1, preco:p.preco}], total:p.preco, status:'pendente', data:hojeISO()});
+  p.estoque -= 1;
+  DB.set('produtos', produtos);
+  DB.set('pedidos', pedidos);
+  toast('Produto adicionado ao pedido!');
+  renderMarketplace();
+}
+function modalProduto(id){
+  const produtos = DB.get('produtos')||[];
+  const p = id? produtos.find(x=>x.id===id):null;
+  openModal('<h3>'+(p?'Editar Produto':'Novo Produto')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="avatar-upload"><div class="big" id="prFotoPrev" style="border-radius:12px">'+(p&&p.foto?'<img src="'+p.foto+'">':icon('image',26))+'</div><div class="avatar-actions"><button class="btn btn-ghost btn-sm" onclick="uploadFoto(\'prFoto\',\'prFotoPrev\')">'+icon('camera',14)+' Foto do produto</button></div></div>'
+  +'<input type="hidden" id="prFoto">'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Nome *</label><input id="prNome" value="'+esc(p?p.nome:'')+'"></div>'
+  +'<div class="field full"><label>Descrição</label><input id="prDesc" value="'+esc(p?p.desc:'')+'"></div>'
+  +'<div class="field"><label>Preço (R$)</label><input id="prPreco" value="'+(p?p.preco:'')+'" inputmode="decimal"></div>'
+  +'<div class="field"><label>Estoque</label><input type="number" id="prEstoque" value="'+(p?p.estoque:10)+'"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarProduto(\''+(id||'')+'\')">Salvar</button></div>');
+  if(p&&p.foto) document.getElementById('prFoto').value=p.foto;
+}
+function salvarProduto(id){
+  const produtos = DB.get('produtos')||[];
+  const nome = document.getElementById('prNome').value.trim();
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  const preco = parseFloat(String(document.getElementById('prPreco').value).replace(',','.'))||0;
+  const dados = { nome, desc:document.getElementById('prDesc').value.trim(), preco, estoque:Number(document.getElementById('prEstoque').value)||0, foto:document.getElementById('prFoto').value, ativo:true };
+  if(id){ Object.assign(produtos.find(x=>x.id===id), dados); DB.set('produtos', produtos); toast('Produto atualizado.','ok'); }
+  else { produtos.push({id:uid(), ...dados}); DB.set('produtos', produtos); toast('Produto cadastrado.','ok'); }
+  closeModal(); renderMarketplace();
+}
+function excluirProduto(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir produto?')) return;
+  DB.set('produtos', (DB.get('produtos')||[]).filter(p=>p.id!==id));
+  toast('Produto excluído.'); renderMarketplace();
+}
+function modalRifa(id){
+  const rifas = DB.get('rifas')||[];
+  const r = id? rifas.find(x=>x.id===id):null;
+  openModal('<h3>'+(r?'Editar Rifa':'Nova Rifa')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Título *</label><input id="rfTitulo" value="'+esc(r?r.titulo:'')+'"></div>'
+  +'<div class="field full"><label>Prêmio</label><input id="rfPremio" value="'+esc(r?r.premio:'')+'"></div>'
+  +'<div class="field"><label>Valor da cota (R$)</label><input id="rfPreco" value="'+(r?r.preco:10)+'" inputmode="decimal"></div>'
+  +'<div class="field"><label>Total de bilhetes</label><input type="number" id="rfTotal" value="'+(r?r.totalBilhetes:100)+'"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarRifa(\''+(id||'')+'\')">Salvar</button></div>');
+}
+function salvarRifa(id){
+  const rifas = DB.get('rifas')||[];
+  const titulo = document.getElementById('rfTitulo').value.trim();
+  if(!titulo){ toast('Informe o título.','warn'); return; }
+  const preco = parseFloat(String(document.getElementById('rfPreco').value).replace(',','.'))||0;
+  const total = Number(document.getElementById('rfTotal').value)||100;
+  if(id){
+    const r = rifas.find(x=>x.id===id);
+    Object.assign(r, {titulo, preco, totalBilhetes:total, premio:document.getElementById('rfPremio').value.trim()});
+    DB.set('rifas', rifas);
+    toast('Rifa atualizada.','ok');
+  } else {
+    rifas.push({id:uid(), titulo, preco, totalBilhetes:total, premio:document.getElementById('rfPremio').value.trim(), status:'ativa', dataSorteio:null, vencedor:null, criadoEm:hojeISO()});
+    DB.set('rifas', rifas);
+    toast('Rifa criada.','ok');
+  }
+  closeModal(); renderMarketplace();
+}
+function excluirRifa(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir rifa?')) return;
+  DB.set('rifas', (DB.get('rifas')||[]).filter(r=>r.id!==id));
+  DB.set('bilhetes', (DB.get('bilhetes')||[]).filter(b=>b.rifaId!==id));
+  toast('Rifa excluída.'); renderMarketplace();
+}
+function comprarBilhete(rifaId, numero){
+  const al = alunoAtual();
+  const bilhetes = DB.get('bilhetes')||[];
+  if(bilhetes.some(b=>b.rifaId===rifaId && b.numero===numero && b.pago)){ toast('Bilhete já vendido.','warn'); return; }
+  const b = bilhetes.find(x=>x.rifaId===rifaId && x.numero===numero && !x.pago);
+  if(b){ b.alunoId=al.id; b.pago=true; }
+  else bilhetes.push({id:uid(), rifaId, numero, alunoId:al.id, pago:true});
+  DB.set('bilhetes', bilhetes);
+  toast('Bilhete '+numero+' comprado!','ok');
+  renderMarketplace();
+}
+function sortearRifa(rifaId){
+  if(!isFull()) return;
+  const rifas = DB.get('rifas')||[];
+  const bilhetes = DB.get('bilhetes')||[];
+  const r = rifas.find(x=>x.id===rifaId);
+  const pagos = bilhetes.filter(b=>b.rifaId===rifaId && b.pago);
+  if(!pagos.length){ toast('Nenhum bilhete pago para sortear.','warn'); return; }
+  if(!confirm('Confirmar sorteio eletrônico da rifa "'+r.titulo+'"?')) return;
+  const vencedor = pagos[Math.floor(Math.random()*pagos.length)];
+  r.status='sorteada'; r.dataSorteio=hojeISO(); r.vencedor=vencedor.id;
+  DB.set('rifas', rifas);
+  const al = (DB.get('alunos')||[]).find(a=>a.id===vencedor.alunoId);
+  toast('Sorteio realizado! Vencedor: '+(al?al.nome:'-')+' (nº '+vencedor.numero+').','ok');
+  renderMarketplace();
+}
+
+/* ============ PARCEIROS ============ */
+function renderParceiros(){
+  const s = Session.get();
+  if(s.perfil==='Professor'){ go('dashboard'); return; }
+  setTitle('Parceiros','Patrocinadores e parcerias');
+  const parceiros = DB.get('parceiros')||[];
+  let html = '';
+  if(isFull()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalParceiro()">'+icon('plus')+' Novo Parceiro</button></div>';
+  html += '<div class="grid grid-3">';
+  parceiros.forEach(p=>{
+    html += '<div class="partner-card'+(p.tipo==='sponsor'?' sponsor':'')+'">'
+    +(p.tipo==='sponsor'?'<span class="sponsor-tag">PATROCINADOR</span>':'')
+    +'<div class="p-logo">'+(p.logo?'<img src="'+p.logo+'">':p.nome.charAt(0))+'</div>'
+    +'<h4>'+esc(p.nome)+'</h4><div class="p-cat">'+esc(p.categoria||'')+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.5">'+esc(p.desc||'')+'</div>'
+    +'<div style="font-size:12px;color:var(--muted)">'+icon('perfil',12)+' '+esc(p.contato||'')+'</div>'
+    +(isFull()?'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="modalParceiro(\''+p.id+'\')">'+icon('edit',13)+'</button><button class="btn btn-danger btn-sm" onclick="excluirParceiro(\''+p.id+'\')">'+icon('trash',13)+'</button></div>':'')
+    +'</div>';
+  });
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalParceiro(id){
+  const parceiros = DB.get('parceiros')||[];
+  const p = id? parceiros.find(x=>x.id===id):null;
+  openModal('<h3>'+(p?'Editar Parceiro':'Novo Parceiro')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Nome *</label><input id="paNome" value="'+esc(p?p.nome:'')+'"></div>'
+  +'<div class="field"><label>Categoria</label><input id="paCat" value="'+esc(p?p.categoria:'')+'"></div>'
+  +'<div class="field"><label>Tipo</label><select id="paTipo"><option value="parceiro"'+(p&&p.tipo==='parceiro'?' selected':'')+'>Parceiro</option><option value="sponsor"'+(p&&p.tipo==='sponsor'?' selected':'')+'>Patrocinador</option></select></div>'
+  +'<div class="field full"><label>Contato</label><input id="paContato" value="'+esc(p?p.contato:'')+'"></div>'
+  +'<div class="field full"><label>Descrição</label><input id="paDesc" value="'+esc(p?p.desc:'')+'"></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarParceiro(\''+(id||'')+'\')">Salvar</button></div>');
+}
+function salvarParceiro(id){
+  const parceiros = DB.get('parceiros')||[];
+  const nome = document.getElementById('paNome').value.trim();
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  const dados = { nome, categoria:document.getElementById('paCat').value.trim(), tipo:document.getElementById('paTipo').value, contato:document.getElementById('paContato').value.trim(), desc:document.getElementById('paDesc').value.trim() };
+  if(id){ Object.assign(parceiros.find(x=>x.id===id), dados); DB.set('parceiros', parceiros); toast('Parceiro atualizado.','ok'); }
+  else { parceiros.push({id:uid(), ...dados, logo:''}); DB.set('parceiros', parceiros); toast('Parceiro cadastrado.','ok'); }
+  closeModal(); renderParceiros();
+}
+function excluirParceiro(id){
+  if(!isFull()) return;
+  if(!confirm('Excluir parceiro?')) return;
+  DB.set('parceiros', (DB.get('parceiros')||[]).filter(p=>p.id!==id));
+  toast('Parceiro excluído.'); renderParceiros();
+}
+
+/* ============ AVISOS ============ */
+function renderAvisos(){
+  const s = Session.get();
+  setTitle('Avisos','Comunicados da academia');
+  let html = '';
+  if(isStaff()) html += '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalAviso()">'+icon('plus')+' Novo Aviso</button></div>';
+  const avisos = DB.get('avisos')||[];
+  html += '<div class="card">';
+  avisos.slice().sort((a,b)=>b.data.localeCompare(a.data)).forEach(a=>{
+    const isAluno = s.perfil==='Aluno';
+    const unread = isAluno && !a.lidos.includes(currentAlunoId());
+    html += '<div class="notice'+(unread?' unread':'')+'"><div class="n-head">'
+    +(unread?'<span class="tag tag-danger">Nova</span>':'')
+    +'<span class="n-title">'+esc(a.titulo)+'</span><span class="n-date">'+fmtData(a.data)+' • '+esc(a.autor||'')+'</span></div>'
+    +'<div class="n-body">'+esc(a.corpo)+'</div>'
+    +(isAluno&&unread?'<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="marcarLido(\''+a.id+'\')">'+icon('check',13)+' Marcar como lido</button>':'')
+    +(isStaff()?'<button class="btn btn-danger btn-sm" style="margin-top:8px;margin-left:8px" onclick="excluirAviso(\''+a.id+'\')">'+icon('trash',13)+'</button>':'')
+    +'</div>';
+  });
+  if(!avisos.length) html += '<p style="color:var(--muted)">Nenhum aviso.</p>';
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function modalAviso(){
+  const alunos = DB.get('alunos')||[];
+  openModal('<h3>Novo Aviso<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Título *</label><input id="avTitulo"></div>'
+  +'<div class="field full"><label>Mensagem *</label><textarea id="avCorpo" rows="3"></textarea></div>'
+  +'<div class="field full"><label>Destino</label><label style="display:flex;gap:14px;align-items:center;text-transform:none;font-weight:400;font-size:14px"><input type="radio" name="avAlvo" value="todos" checked style="width:auto"> Todos</label>'
+  +'<div style="margin-top:6px"><label style="display:flex;gap:14px;align-items:center;text-transform:none;font-weight:400;font-size:14px"><input type="radio" name="avAlvo" value="alunos" style="width:auto"> Alunos específicos</label></div>'
+  +'<div id="avAlunosSel" style="display:none;margin-top:8px"><label>Selecione alunos</label><select id="avAlunos" multiple size="4" style="height:auto">'+alunos.map(a=>'<option value="'+a.id+'">'+esc(a.nome)+'</option>').join('')+'</select></div></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarAviso()">Publicar</button></div>');
+  document.querySelectorAll('input[name=avAlvo]').forEach(r=>r.addEventListener('change', ()=>{
+    document.getElementById('avAlunosSel').style.display = r.value==='alunos'?'block':'none';
+  }));
+}
+function salvarAviso(){
+  const avisos = DB.get('avisos')||[];
+  const titulo = document.getElementById('avTitulo').value.trim();
+  const corpo = document.getElementById('avCorpo').value.trim();
+  if(!titulo || !corpo){ toast('Preencha título e mensagem.','warn'); return; }
+  const alvo = document.querySelector('input[name=avAlvo]:checked').value;
+  const aviso = {id:uid(), titulo, corpo, data:hojeISO(), autor:Session.get().nome, alvo, lidos:[]};
+  if(alvo==='alunos'){
+    const sel = document.querySelectorAll('#avAlunos option:checked');
+    aviso.alvoAlunos = Array.from(sel).map(o=>o.value);
+  }
+  avisos.push(aviso);
+  DB.set('avisos', avisos);
+  toast('Aviso publicado.','ok');
+  closeModal(); renderAvisos();
+}
+function marcarLido(id){
+  const avisos = DB.get('avisos')||[];
+  const a = avisos.find(x=>x.id===id);
+  const alId = currentAlunoId();
+  if(a && !a.lidos.includes(alId)) a.lidos.push(alId);
+  DB.set('avisos', avisos);
+  renderAvisos(); renderNav();
+}
+function excluirAviso(id){
+  if(!isStaff()) return;
+  if(!confirm('Excluir aviso?')) return;
+  DB.set('avisos', (DB.get('avisos')||[]).filter(a=>a.id!==id));
+  toast('Aviso excluído.'); renderAvisos();
+}
+
+/* ============ RELATÓRIOS ============ */
+function renderRelatorios(){
+  if(!isFull()){ renderAcessoRestrito(); return; }
+  setTitle('Relatórios','Métricas e exportação');
+  const alunos = DB.get('alunos')||[];
+  const turmas = DB.get('turmas')||[];
+  const mensalidades = DB.get('mensalidades')||[];
+  const presencas = DB.get('presencas')||[];
+  const pedidos = DB.get('pedidos')||[];
+  const ativos = alunos.filter(a=>a.ativo).length;
+  const inad = alunos.filter(a=>situacaoFinanceiraAluno(a.id).inad).length;
+  const porFaixa = {};
+  alunos.forEach(a=>{ porFaixa[a.faixa]=(porFaixa[a.faixa]||0)+1; });
+  const presencasMes = presencas.filter(p=>p.data.startsWith(hojeISO().slice(0,7)));
+  const presentes = presencasMes.filter(p=>p.presente).length;
+  const receitaMensalidades = mensalidades.filter(m=>m.status==='pago').reduce((s,m)=>s+m.valor,0);
+  const receitaLoja = pedidos.reduce((s,p)=>s+p.total,0);
+  let html = '<div class="grid grid-4">';
+  html += statCard('Alunos Ativos', ativos, 'alunos', '#3498db');
+  html += statCard('Inadimplentes', inad, 'warn', '#f39c12');
+  html += statCard('Presenças (mês)', presentes+'/'+presencasMes.length, 'check', '#2ecc71');
+  html += statCard('Receita Total', money(receitaMensalidades+receitaLoja), 'financeiro', '#f9c80e');
+  html += '</div>';
+  html += '<div class="grid grid-2">';
+  html += '<div class="card"><h3>'+icon('trilha')+'Alunos por Faixa</h3><div class="table-wrap"><table><thead><tr><th>Faixa</th><th>Quantidade</th></tr></thead><tbody>';
+  FAIXA_ORDEM.forEach(f=>{
+    if(porFaixa[f]) html += '<tr><td><span class="belt-chip"><span class="belt-bar" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span></td><td>'+porFaixa[f]+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  html += '<div class="card"><h3>'+icon('presencas')+'Presenças por Turma</h3>';
+  turmas.forEach(t=>{
+    const regs = presencas.filter(p=>p.turmaId===t.id);
+    const pres = regs.filter(p=>p.presente).length;
+    const pct = regs.length?Math.round(pres/regs.length*100):0;
+    html += '<div class="bar-cell"><div class="bc-label">'+esc(t.nome)+'</div><div class="bc-track"><div class="bc-fill" style="width:'+pct+'%">'+pct+'%</div></div><div class="bc-val">'+pres+'/'+regs.length+'</div></div>';
+  });
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="card"><h3>'+icon('download')+'Exportações</h3>'
+  +'<div style="display:flex;flex-direction:column;gap:10px">'
+  +'<button class="btn btn-ghost" onclick="exportarAlunosCSV()">'+icon('download')+' Exportar Alunos (CSV)</button>'
+  +'<button class="btn btn-ghost" onclick="exportarFinanceiroCSV()">'+icon('download')+' Exportar Financeiro (CSV)</button>'
+  +'<button class="btn btn-ghost" onclick="exportarPresencasCSV()">'+icon('download')+' Exportar Presenças (CSV)</button>'
+  +'</div></div>';
+  document.getElementById('content').innerHTML = html;
+}
+function renderAcessoRestrito(){
+  document.getElementById('content').innerHTML = '<div class="alert alert-warn">'+icon('warn')+'<div>Você não tem permissão para acessar esta área. Fale com o Professor Líder.</div></div>';
+}
+function exportarAlunosCSV(){
+  const alunos = DB.get('alunos')||[];
+  let csv = 'Nome;CPF;Email;Celular;Nascimento;Faixa;Graus;Status\n';
+  alunos.forEach(a=>csv += a.nome+';'+(a.cpf||'')+';'+(a.email||'')+';'+(a.celular||'')+';'+(a.nascimento||'')+';'+a.faixa+';'+a.graus+';'+(a.ativo?'Ativo':'Inativo')+'\n');
+  downloadCSV(csv, 'alunos_'+hojeISO()+'.csv');
+  toast('Exportação gerada.','ok');
+}
+function exportarFinanceiroCSV(){
+  const cobrancas = todasCobrancas();
+  let csv = 'Tipo;Aluno;Descricao;Valor;Vencimento;Status\n';
+  cobrancas.forEach(c=>{ csv += c.tipo+';'+c.aluno+';'+c.descricao+';'+c.valor+';'+(c.vencimento||'')+';'+statusCobranca(c).label+'\n'; });
+  downloadCSV(csv, 'financeiro_'+hojeISO()+'.csv');
+  toast('Exportação gerada.','ok');
+}
+function exportarPresencasCSV(){
+  const presencas = DB.get('presencas')||[];
+  let csv = 'Aluno;Turma;Data;Presente\n';
+  presencas.forEach(p=>{ const al=(DB.get('alunos')||[]).find(a=>a.id===p.alunoId); const t=(DB.get('turmas')||[]).find(x=>x.id===p.turmaId); csv += (al?al.nome:'-')+';'+(t?t.nome:'-')+';'+p.data+';'+(p.presente?'Sim':'Não')+'\n'; });
+  downloadCSV(csv, 'presencas_'+hojeISO()+'.csv');
+  toast('Exportação gerada.','ok');
+}
+
+/* ============ WHITE LABEL ============ */
+function renderWhiteLabel(){
+  if(!isFull()) return;
+  setTitle('White Label','Personalização em tempo real');
+  const cfg = DB.get('config')||{};
+  let html = '<div class="card"><h3>'+icon('whitelabel')+'Aparência</h3>'
+  +'<div class="form-grid">'
+  +'<div class="field"><label>Nome da academia</label><input id="wlNome" value="'+esc(cfg.academyName||'')+'"></div>'
+  +'<div class="field"><label>Tagline</label><input id="wlTag" value="'+esc(cfg.tagline||'')+'"></div>'
+  +'<div class="field"><label>Cor primária</label><div class="color-input"><input type="color" id="wlPrim" value="'+(cfg.primary||'#e94560')+'"><span id="wlPrimTxt">'+(cfg.primary||'#e94560')+'</span></div></div>'
+  +'<div class="field"><label>Cor secundária</label><div class="color-input"><input type="color" id="wlSec" value="'+(cfg.secondary||'#f9c80e')+'"><span id="wlSecTxt">'+(cfg.secondary||'#f9c80e')+'</span></div></div>'
+  +'<div class="field"><label>Subdomínio</label><input id="wlSub" value="'+esc(cfg.subdomain||'')+'" placeholder="ex.: minhaacademia"></div>'
+  +'</div>'
+  +'<div style="margin-top:16px;display:flex;gap:10px"><button class="btn btn-primary" onclick="salvarWhiteLabel()">'+icon('check')+' Salvar</button><button class="btn btn-ghost" onclick="previewWhiteLabel()">'+icon('eye')+' Prévia</button></div>'
+  +'</div>';
+  document.getElementById('content').innerHTML = html;
+  document.getElementById('wlPrim').addEventListener('input', e=>{ document.getElementById('wlPrimTxt').textContent=e.target.value; applyWhiteLabel(); });
+  document.getElementById('wlSec').addEventListener('input', e=>{ document.getElementById('wlSecTxt').textContent=e.target.value; applyWhiteLabel(); });
+}
+function applyColors(prim, sec){
+  const r = document.documentElement.style;
+  r.setProperty('--primary', prim);
+  r.setProperty('--secondary', sec);
+}
+function salvarWhiteLabel(){
+  const cfg = DB.get('config')||{};
+  cfg.academyName = document.getElementById('wlNome').value.trim() || 'Tatame BJJ';
+  cfg.tagline = document.getElementById('wlTag').value.trim();
+  cfg.primary = document.getElementById('wlPrim').value;
+  cfg.secondary = document.getElementById('wlSec').value;
+  cfg.subdomain = document.getElementById('wlSub').value.trim();
+  DB.set('config', cfg);
+  applyWhiteLabel();
+  toast('White Label salvo.','ok');
+}
+function previewWhiteLabel(){
+  const cfg = DB.get('config')||{};
+  applyColors(cfg.primary||'#e94560', cfg.secondary||'#f9c80e');
+  toast('Prévia aplicada em tempo real.','ok');
+}
+function applyWhiteLabel(){
+  const cfg = DB.get('config')||{};
+  if(cfg.primary) applyColors(cfg.primary, cfg.secondary||'#f9c80e');
+  document.getElementById('wlTagline').textContent = (cfg.tagline||'SISTEMA DE GESTÃO').toUpperCase();
+  document.title = (cfg.academyName||'Tatame BJJ')+' - Sistema de Gestão';
+}
+
+/* ============ CONFIGURAÇÕES ============ */
+function renderConfig(){
+  if(!isFull()) return;
+  setTitle('Configurações','Preferências do sistema');
+  const cfg = DB.get('config')||{};
+  let html = '<div class="card"><h3>'+icon('config')+'Configurações Gerais</h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Nome da academia</label><input id="cfNome" value="'+esc(cfg.academyName||'')+'"></div>'
+  +'<div class="field"><label>Subdomínio</label><input id="cfSub" value="'+esc(cfg.subdomain||'')+'"></div>'
+  +'</div>'
+  +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">'+icon('check')+' Salvar</button></div>'
+  +'</div>'
+  +'<div class="card"><h3>'+icon('info')+'Sobre o Sistema</h3>'
+  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.5 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
+  +'<div style="margin-top:14px"><button class="btn btn-danger" onclick="resetDados()">'+icon('trash')+' Restaurar dados de demonstração</button></div>'
+  +'</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function salvarConfig(){
+  const cfg = DB.get('config')||{};
+  cfg.academyName = document.getElementById('cfNome').value.trim()||'Tatame BJJ';
+  cfg.subdomain = document.getElementById('cfSub').value.trim();
+  DB.set('config', cfg);
+  applyWhiteLabel();
+  toast('Configurações salvas.','ok');
+}
+function resetDados(){
+  if(!confirm('Restaurar todos os dados de demonstração? As alterações serão perdidas.')) return;
+  DB.reset();
+  Session.clear();
+  toast('Dados restaurados.','ok');
+  go('dashboard');
+}
+
+/* ============ MEU PERFIL ============ */
+function renderPerfil(){
+  const s = Session.get();
+  setTitle('Meu Perfil','Dados da conta e senha');
+  const user = (DB.get('users')||[]).find(u=>u.id===s.id) || s;
+  const aluno = user.alunoId ? (DB.get('alunos')||[]).find(a=>a.id===user.alunoId) : null;
+  let html = '<div class="grid grid-2">';
+  html += '<div class="card"><h3>'+icon('perfil')+'Dados Pessoais</h3>'
+  +'<div class="avatar-upload"><div class="big" id="perfFotoPrev">'+avHtml(user.foto,user.nome)+'</div><div class="avatar-actions"><button class="btn btn-ghost btn-sm" onclick="uploadFoto(\'perfFoto\',\'perfFotoPrev\')">'+icon('camera',13)+' Galeria / Câmera</button></div></div>'
+  +'<input type="hidden" id="perfFoto" value="'+esc(user.foto||'')+'">'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Nome</label><input id="perfNome" value="'+esc(user.nome)+'"></div>'
+  +'<div class="field"><label>Login</label><input value="'+esc(user.login)+'" readonly></div>'
+  +'<div class="field"><label>Perfil</label><input value="'+esc(user.perfil)+'" readonly></div>'
+  +(aluno?'<div class="field"><label>CPF (readonly)</label><input value="'+esc(aluno.cpf?maskCPF(aluno.cpf):'-')+'" readonly></div>':'')
+  +'<div class="field"><label>E-mail</label><input id="perfEmail" type="email" value="'+esc(user.email||'')+'"></div>'
+  +'</div>'
+  +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarPerfil()">'+icon('check')+' Salvar dados</button></div>'
+  +'</div>';
+  html += '<div class="card"><h3>'+icon('config')+'Alterar Senha</h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Senha atual</label><input type="password" id="pwAtual"></div>'
+  +'<div class="field"><label>Nova senha (mín. 6 dígitos)</label><input type="password" id="pwNova"></div>'
+  +'<div class="field"><label>Confirmar nova senha</label><input type="password" id="pwConf"></div>'
+  +'</div>'
+  +'<div style="margin-top:16px"><button class="btn btn-gold" onclick="alterarSenha()">'+icon('check')+' Alterar senha</button></div>'
+  +'<div id="pwMsg"></div>'
+  +'</div>';
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+function salvarPerfil(){
+  const s = Session.get();
+  const users = DB.get('users')||[];
+  const user = users.find(u=>u.id===s.id);
+  const nome = document.getElementById('perfNome').value.trim();
+  const email = document.getElementById('perfEmail').value.trim();
+  const foto = document.getElementById('perfFoto').value;
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  if(user){
+    user.nome=nome; user.email=email; user.foto=foto;
+    DB.set('users', users);
+    if(user.alunoId){
+      const alunos = DB.get('alunos')||[];
+      const a = alunos.find(x=>x.id===user.alunoId);
+      if(a){ a.nome=nome; a.email=email; a.foto=foto; DB.set('alunos', alunos); }
+    }
+    Session.set(user);
+    renderNav();
+  }
+  toast('Perfil atualizado.','ok');
+  renderPerfil();
+}
+function alterarSenha(){
+  const s = Session.get();
+  const users = DB.get('users')||[];
+  const user = users.find(u=>u.id===s.id);
+  const atual = document.getElementById('pwAtual').value;
+  const nova = document.getElementById('pwNova').value;
+  const conf = document.getElementById('pwConf').value;
+  const msg = document.getElementById('pwMsg');
+  msg.innerHTML='';
+  if(user.senha!==atual){ msg.innerHTML='<div class="alert alert-danger">'+icon('warn')+'<div>Senha atual incorreta.</div></div>'; return; }
+  if(nova.length<6){ msg.innerHTML='<div class="alert alert-danger">'+icon('warn')+'<div>A nova senha deve ter no mínimo 6 dígitos.</div></div>'; return; }
+  if(nova!==conf){ msg.innerHTML='<div class="alert alert-danger">'+icon('warn')+'<div>As senhas não coincidem.</div></div>'; return; }
+  user.senha = nova;
+  DB.set('users', users);
+  Session.set(user);
+  document.getElementById('pwAtual').value=''; document.getElementById('pwNova').value=''; document.getElementById('pwConf').value='';
+  msg.innerHTML='<div class="alert alert-ok">'+icon('check')+'<div>Senha alterada com sucesso.</div></div>';
+  toast('Senha alterada!','ok');
+}
+
+/* ============ DEPENDENTES ============ */
+function renderDependentes(){
+  const s = Session.get();
+  if(s.perfil!=='Aluno'){ go('dashboard'); return; }
+  const titular = (DB.get('alunos')||[]).find(a=>a.id===s.alunoId);
+  if(!titular || !titular.dependentes || !titular.dependentes.length){ go('dashboard'); return; }
+  setTitle('Meus Dependentes','Vincule até 5 dependentes');
+  const alunos = DB.get('alunos')||[];
+  const deps = alunos.filter(a=>titular.dependentes.includes(a.id));
+  let html = '<div class="alert alert-info">'+icon('info')+'<div>Você pode operar agendamentos, financeiro, trilha e pedido em nome de cada dependente usando o seletor no topo da tela.</div></div>';
+  html += '<div class="grid grid-2">';
+  deps.forEach(d=>{
+    const f = faixaInfo(d);
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+avHtml(d.foto,d.nome)+'<div style="flex:1"><b>'+esc(d.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+(idadeDe(d.nascimento)!=null?idadeDe(d.nascimento)+' anos':'')+' • '+esc(d.dependenteDe||'')+'</div></div>'
+    +'<button class="btn btn-danger btn-sm" onclick="removerDependente(\''+d.id+'\')">'+icon('trash',13)+'</button></div>'
+    +'<div style="display:flex;align-items:center;gap:10px"><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(d.faixa)+'</span><span style="color:var(--muted);font-size:12px">'+f.graus+' grau(s)</span></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="setDep(\''+d.id+'\');go(\'dashboard\')">'+icon('eye',13)+' Operar como '+esc(d.nome.split(' ')[0])+'</button></div>'
+    +'</div>';
+  });
+  html += '</div>';
+  if(deps.length<5){
+    html += '<div class="card"><h3>'+icon('plus')+'Vincular Dependente</h3>'
+    +'<div class="row"><div class="field" style="max-width:320px"><label>Nome do dependente</label><input id="depNome" placeholder="Nome completo"></div>'
+    +'<div class="field" style="max-width:200px"><label>Nascimento</label><input type="date" id="depNasc"></div>'
+    +'<div class="field" style="max-width:200px"><label>Faixa</label><select id="depFaixa">'+FAIXAS_INFANTIS.concat(FAIXAS_ADULTAS).map(f=>'<option value="'+f+'">'+f+'</option>').join('')+'</select></div>'
+    +'<div style="align-self:flex-end"><button class="btn btn-primary" onclick="adicionarDependente()">'+icon('plus')+' Vincular</button></div></div>'
+    +'</div>';
+  } else {
+    html += '<div class="alert alert-warn">'+icon('warn')+'<div>Limite de 5 dependentes atingido.</div></div>';
+  }
+  document.getElementById('content').innerHTML = html;
+}
+function adicionarDependente(){
+  const s = Session.get();
+  const alunos = DB.get('alunos')||[];
+  const titular = alunos.find(a=>a.id===s.alunoId);
+  if(!titular.dependentes) titular.dependentes=[];
+  if(titular.dependentes.length>=5){ toast('Limite de 5 dependentes.','warn'); return; }
+  const nome = document.getElementById('depNome').value.trim();
+  if(!nome){ toast('Informe o nome.','warn'); return; }
+  const novo = {id:uid(), nome, cpf:'', email:'', celular:'', nascimento:document.getElementById('depNasc').value, faixa:document.getElementById('depFaixa').value, graus:0, ativo:true, foto:'', dependentes:[], dependenteDe:'dependente de '+titular.nome, nota:''};
+  alunos.push(novo);
+  titular.dependentes.push(novo.id);
+  DB.set('alunos', alunos);
+  toast('Dependente vinculado.','ok');
+  renderDependentes(); renderNav();
+}
+function removerDependente(depId){
+  if(!confirm('Remover este dependente?')) return;
+  const alunos = DB.get('alunos')||[];
+  const s = Session.get();
+  const titular = alunos.find(a=>a.id===s.alunoId);
+  titular.dependentes = titular.dependentes.filter(d=>d!==depId);
+  DB.set('alunos', alunos.filter(d=>d.id!==depId));
+  if(current.depId===depId) current.depId=null;
+  toast('Dependente removido.');
+  renderDependentes(); renderNav();
+}
+
+/* ============ INICIALIZAÇÃO ============ */
+function init(){
+  DB.init();
+  applyWhiteLabel();
+  let s = Session.get();
+  if(s){
+    const users = DB.get('users')||[];
+    if(!users.some(u=>u.id===s.id)){ Session.clear(); s = null; }
+  }
+  if(s){
+    document.getElementById('loginView').style.display='none';
+    document.getElementById('appView').style.display='flex';
+    renderNav();
+    go('dashboard');
+  } else {
+    document.getElementById('loginView').style.display='flex';
+    document.getElementById('appView').style.display='none';
+  }
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
