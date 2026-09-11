@@ -153,11 +153,14 @@ tbody tr:hover{background:var(--card2)}
 .prod-body .btn{margin-top:auto}
 
 .raffle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
-.raffle-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--card2);border:1px solid var(--border);transition:all .15s}
-.raffle-cell:hover{border-color:var(--primary)}
-.raffle-cell.sold{background:rgba(233,69,96,.2);color:var(--danger);border-color:rgba(233,69,96,.3);cursor:not-allowed}
+.raffle-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--card2);border:1px solid var(--border);transition:all .15s;cursor:default}
+.raffle-cell.free{cursor:pointer}
+.raffle-cell.free:hover{border-color:var(--primary);background:rgba(233,69,96,.1)}
+.raffle-cell.sold{background:rgba(46,204,113,.18);color:var(--ok);border-color:rgba(46,204,113,.4)}
+.raffle-cell.reserved{background:rgba(243,156,18,.2);color:var(--warn);border-color:var(--warn)}
 .raffle-cell.mine{background:rgba(249,200,14,.2);color:var(--secondary);border-color:var(--secondary)}
 .raffle-cell.winner{background:var(--ok);color:#fff;border-color:var(--ok)}
+.rifa-list-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;display:flex;align-items:center;gap:6px}
 
 .timeline{position:relative;padding-left:26px}
 .timeline::before{content:'';position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--border)}
@@ -220,20 +223,13 @@ tbody tr:hover{background:var(--card2)}
 .chart-legend .lg{display:flex;align-items:center;gap:5px}
 .chart-legend .dot{width:9px;height:9px;border-radius:3px}
 .chart-tip{font-size:11px;color:var(--muted);text-align:center;padding:20px 0}
-.axis-label{font-size:10px;fill:var(--muted)}
-.grid-line{stroke:var(--border);stroke-width:1}
 .bar-cell{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .bar-cell .bc-label{width:130px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-cell .bc-track{flex:1;height:22px;background:var(--card2);border-radius:6px;overflow:hidden;position:relative}
 .bar-cell .bc-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:11px;font-weight:700;color:#fff;min-width:34px;transition:width .5s ease}
 .bar-cell .bc-val{width:40px;text-align:right;font-size:12px;font-weight:700}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.dash-grid.cols-2{grid-template-columns:1fr}}
-@media(max-width:600px){.kpi-row{grid-template-columns:1fr}}
-
-@media(max-width:900px){
-  .grid-4{grid-template-columns:repeat(2,1fr)}
-  .grid-3{grid-template-columns:repeat(2,1fr)}
-}
+@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0);box-shadow:0 0 40px rgba(0,0,0,.5)}
@@ -246,10 +242,8 @@ tbody tr:hover{background:var(--card2)}
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:45;display:none}
   .overlay.show{display:block}
 }
-@media(max-width:480px){
-  .stat-card .value{font-size:22px}
-  .prod-grid{grid-template-columns:repeat(2,1fr)}
-}
+@media(max-width:600px){.kpi-row{grid-template-columns:1fr}}
+@media(max-width:480px){.stat-card .value{font-size:22px}.prod-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -320,14 +314,15 @@ tbody tr:hover{background:var(--card2)}
 
 <script>
 /* ============================================================
-   TATAME BJJ v3.5 - Sistema de Gestão para Academia de Jiu-Jitsu
+   TATAME BJJ v3.7 - Sistema de Gestão para Academia de Jiu-Jitsu
    Perfis: ADM, Professor Líder, Professor e Aluno (com dependentes)
-   Camada de dados: localStorage via objeto DB (v9)
+   Trilha IBJJF completa + Rifas com lista de escolhas e confirmação
+   Camada de dados: localStorage via objeto DB (v11 - login estável)
    ============================================================ */
 
-const DB_KEY = 'tatame_bjj_db_v9';
-const SESSION_KEY = 'tatame_bjj_session_v9';
-const DB_VERSION = 9;
+const DB_KEY = 'tatame_bjj_db_v11';
+const SESSION_KEY = 'tatame_bjj_session_v11';
+const DB_VERSION = 11;
 
 const DB = {
   get(key){
@@ -346,7 +341,7 @@ const DB = {
       const raw = localStorage.getItem(DB_KEY);
       if(raw){
         const all = JSON.parse(raw);
-        if(all && all._v === DB_VERSION) return;
+        if(all && all._v === DB_VERSION && Array.isArray(all.users) && all.users.length) return;
       }
     }catch(e){}
     const now = Date.now();
@@ -366,7 +361,7 @@ const DB = {
       ],
       alunos:[
         {id:'a1', nome:'João Silva', cpf:'12345678901', email:'joao@email.com', celular:'(21) 98765-4321', nascimento:'2000-05-14', faixa:'Azul', graus:2, ativo:true, foto:'', dependentes:['a2','a3'], nota:''},
-        {id:'a2', nome:'Pedro Silva', cpf:'', email:'', celular:'', nascimento:'2014-03-22', faixa:'Cinza', graus:1, ativo:true, foto:'', dependentes:[], dependenteDe:'Sobrinho de João Silva', nota:''},
+        {id:'a2', nome:'Pedro Silva', cpf:'', email:'', celular:'', nascimento:'2014-03-22', faixa:'Amarela e Branca', graus:2, ativo:true, foto:'', dependentes:[], dependenteDe:'Sobrinho de João Silva', nota:''},
         {id:'a3', nome:'Ana Silva', cpf:'', email:'', celular:'', nascimento:'2016-09-10', faixa:'Branca', graus:0, ativo:true, foto:'', dependentes:[], dependenteDe:'Filha de João Silva', nota:''},
         {id:'a4', nome:'Bruno Costa', cpf:'98765432100', email:'bruno@email.com', celular:'(21) 97654-3210', nascimento:'1995-01-30', faixa:'Roxa', graus:1, ativo:true, foto:'', dependentes:[], nota:''},
         {id:'a5', nome:'Mariana Souza', cpf:'11122233344', email:'mari@email.com', celular:'(21) 96543-2109', nascimento:'1998-08-08', faixa:'Branca', graus:0, ativo:true, foto:'', dependentes:[], nota:''},
@@ -429,11 +424,13 @@ const DB = {
         {id:'r2', titulo:'Rifa - Faixa Oficial', preco: 5, totalBilhetes:50, status:'sorteada', premio:'Faixa Azul Oficial', dataSorteio:iso(now - 86400000*30), vencedor:'b10', criadoEm:iso(now - 86400000*40)}
       ],
       bilhetes:[
-        {id:'b1', rifaId:'r1', numero:7, alunoId:null, pago:false},
-        {id:'b2', rifaId:'r1', numero:15, alunoId:'a1', pago:true},
-        {id:'b3', rifaId:'r1', numero:22, alunoId:'a1', pago:true},
-        {id:'b4', rifaId:'r1', numero:30, alunoId:'a5', pago:false},
-        {id:'b10', rifaId:'r2', numero:10, alunoId:'a4', pago:true}
+        {id:'b1', rifaId:'r1', numero:7, alunoId:null, reservado:false, pago:false},
+        {id:'b2', rifaId:'r1', numero:15, alunoId:'a1', reservado:true, pago:true, reservadoEm:iso(now - 86400000*4)},
+        {id:'b3', rifaId:'r1', numero:22, alunoId:'a1', reservado:true, pago:true, reservadoEm:iso(now - 86400000*3)},
+        {id:'b4', rifaId:'r1', numero:30, alunoId:'a5', reservado:true, pago:false, reservadoEm:iso(now - 86400000*1)},
+        {id:'b5', rifaId:'r1', numero:41, alunoId:'a4', reservado:true, pago:true, reservadoEm:iso(now - 86400000*2)},
+        {id:'b6', rifaId:'r1', numero:52, alunoId:'a6', reservado:true, pago:false, reservadoEm:iso(now)},
+        {id:'b10', rifaId:'r2', numero:10, alunoId:'a4', reservado:true, pago:true, reservadoEm:iso(now - 86400000*35)}
       ],
       cobrancas:[
         {id:'cb1', alunoId:'a4', descricao:'Taxa de exame de faixa', valor:50, status:'aberto', vencimento:iso(now - 86400000*5), criadoEm:iso(now - 86400000*5)}
@@ -454,7 +451,7 @@ const DB = {
         {id:'tr2', alunoId:'a1', data:iso(now - 86400000*200), tipo:'grau', de:'0', para:'1', obs:'1º grau na faixa azul'},
         {id:'tr3', alunoId:'a1', data:iso(now - 86400000*60), tipo:'grau', de:'1', para:'2', obs:'2º grau na faixa azul'},
         {id:'tr4', alunoId:'a4', data:iso(now - 86400000*300), tipo:'faixa', de:'Azul', para:'Roxa', obs:'Promoção'},
-        {id:'tr5', alunoId:'a2', data:iso(now - 86400000*30), tipo:'faixa', de:'Branca', para:'Cinza', obs:'Faixa cinza infantil'}
+        {id:'tr5', alunoId:'a2', data:iso(now - 86400000*30), tipo:'faixa', de:'Branca', para:'Amarela e Branca', obs:'Faixa intermediária infantil'}
       ],
       certificados:[
         {id:'c1', alunoId:'a1', titulo:'Faixa Azul', data:iso(now - 86400000*700), token:'CERT-ABC123', emissor:'Carlos Mendes'}
@@ -501,8 +498,6 @@ function cortePeriodo(periodo){
 function periodoLabel(periodo){
   return periodo==='7d'?'Últimos 7 dias': periodo==='90d'?'Últimos 90 dias': periodo==='todos'?'Todo o histórico':'Últimos 30 dias';
 }
-
-/* Máscara de celular (RF-01) */
 function maskCelular(value){
   let d = String(value||'').replace(/\D/g,'').slice(0,11);
   if(!d) return '';
@@ -533,7 +528,7 @@ function validarCPF(cpf){
   return true;
 }
 
-/* ============ ICONS SVG ============ */
+/* ============ ÍCONES SVG ============ */
 function icon(name, size){
   const paths = {
     dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
@@ -579,21 +574,37 @@ function icon(name, size){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="'+(size||18)+'" height="'+(size||18)+'">'+ (paths[name]||paths.info) +'</svg>';
 }
 
-/* ============ CORES DAS FAIXAS (RF-09) ============ */
+/* ============================================================
+   TRILHA IBJJF - registro completo com faixas intermediárias
+   ============================================================ */
 const FAIXAS_IBJJF = {
-  'Branca': {hex:'#e8e8e8', min:4},
-  'Cinza': {hex:'#9e9e9e', min:4},
-  'Amarela': {hex:'#f1c40f', min:7},
-  'Laranja': {hex:'#e67e22', min:10},
-  'Verde': {hex:'#27ae60', min:13},
-  'Azul': {hex:'#2e86de', min:16},
-  'Roxa': {hex:'#8e44ad', min:16},
-  'Marrom': {hex:'#6d4c41', min:18},
-  'Preta': {hex:'#111111', min:19}
+  'Branca':            { hex:'#e8e8e8', grupo:'infantil', ordem:0,  min:4,  max:15, grausMax:4 },
+  'Cinza e Branca':    { hex:'#9e9e9e', grupo:'infantil', ordem:1,  min:4,  max:15, grausMax:4 },
+  'Cinza':             { hex:'#9e9e9e', grupo:'infantil', ordem:2,  min:4,  max:15, grausMax:4 },
+  'Cinza e Preta':     { hex:'#9e9e9e', grupo:'infantil', ordem:3,  min:4,  max:15, grausMax:4 },
+  'Amarela e Branca':  { hex:'#f1c40f', grupo:'infantil', ordem:4,  min:7,  max:15, grausMax:4 },
+  'Amarela':           { hex:'#f1c40f', grupo:'infantil', ordem:5,  min:7,  max:15, grausMax:4 },
+  'Amarela e Preta':   { hex:'#f1c40f', grupo:'infantil', ordem:6,  min:7,  max:15, grausMax:4 },
+  'Laranja e Branca':  { hex:'#e67e22', grupo:'infantil', ordem:7,  min:10, max:15, grausMax:4 },
+  'Laranja':           { hex:'#e67e22', grupo:'infantil', ordem:8,  min:10, max:15, grausMax:4 },
+  'Laranja e Preta':   { hex:'#e67e22', grupo:'infantil', ordem:9,  min:10, max:15, grausMax:4 },
+  'Verde e Branca':    { hex:'#27ae60', grupo:'infantil', ordem:10, min:13, max:15, grausMax:4 },
+  'Verde':             { hex:'#27ae60', grupo:'infantil', ordem:11, min:13, max:15, grausMax:4 },
+  'Verde e Preta':     { hex:'#27ae60', grupo:'infantil', ordem:12, min:13, max:15, grausMax:4 },
+  'Azul':              { hex:'#2e86de', grupo:'adulto',   ordem:13, min:16, grausMax:4 },
+  'Roxa':              { hex:'#8e44ad', grupo:'adulto',   ordem:14, min:16, grausMax:4 },
+  'Marrom':            { hex:'#6d4c41', grupo:'adulto',   ordem:15, min:18, grausMax:4 },
+  'Preta':             { hex:'#111111', grupo:'adulto',   ordem:16, min:19, grausMax:6 },
+  'Coral 7º grau':     { hex:'#111111', grupo:'mestre',   ordem:17, min:50, grausMax:1 },
+  'Coral 8º grau':     { hex:'#111111', grupo:'mestre',   ordem:18, min:57, grausMax:1 },
+  'Vermelha 9º grau':  { hex:'#c0392b', grupo:'mestre',   ordem:19, min:67, grausMax:1 },
+  'Vermelha 10º grau': { hex:'#c0392b', grupo:'mestre',   ordem:20, min:67, grausMax:1 }
 };
-const FAIXAS_INFANTIS = ['Branca','Cinza','Amarela','Laranja','Verde'];
-const FAIXAS_ADULTAS = ['Azul','Roxa','Marrom','Preta'];
-const FAIXA_ORDEM = ['Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta'];
+const FAIXA_ORDEM = Object.keys(FAIXAS_IBJJF).sort((a,b)=>FAIXAS_IBJJF[a].ordem - FAIXAS_IBJJF[b].ordem);
+const FAIXAS_INFANTIS = FAIXA_ORDEM.filter(n=>FAIXAS_IBJJF[n].grupo==='infantil');
+const FAIXAS_ADULTAS  = FAIXA_ORDEM.filter(n=>FAIXAS_IBJJF[n].grupo==='adulto');
+const CONFIG_GRADUACAO = { bloquearIdade:false };
+
 function idadeDe(nascimento){
   if(!nascimento) return null;
   const n = new Date(nascimento + 'T00:00:00');
@@ -606,6 +617,61 @@ function idadeDe(nascimento){
 function faixaInfo(aluno){
   const f = FAIXAS_IBJJF[aluno.faixa] || {hex:'#e8e8e8'};
   return {faixa:aluno.faixa, hex:f.hex, graus:Number(aluno.graus||0)};
+}
+function faixaPorOrdem(n){
+  return FAIXA_ORDEM.find(nome=>FAIXAS_IBJJF[nome].ordem===n) || null;
+}
+function proximaFaixa(faixa, idade){
+  const atual = FAIXAS_IBJJF[faixa];
+  if(!atual) return null;
+  if(atual.grupo==='infantil' && idade!=null && idade>=16){
+    return faixa==='Branca' ? 'Branca' : 'Azul';
+  }
+  return faixaPorOrdem(atual.ordem + 1);
+}
+function proximasFaixasValidas(aluno){
+  const idade = idadeDe(aluno.nascimento);
+  const atual = FAIXAS_IBJJF[aluno.faixa];
+  if(!atual) return [];
+  if(atual.grupo==='infantil' && idade!=null && idade>=16){
+    return [aluno.faixa==='Branca' ? 'Branca' : 'Azul'];
+  }
+  const prox = faixaPorOrdem(atual.ordem + 1);
+  return prox ? [prox] : [];
+}
+function podeReceberGrau(aluno){
+  const f = FAIXAS_IBJJF[aluno.faixa];
+  if(!f) return false;
+  return Number(aluno.graus||0) < f.grausMax;
+}
+function proximaAcao(aluno){
+  const f = FAIXAS_IBJJF[aluno.faixa];
+  if(!f) return null;
+  return Number(aluno.graus||0) < f.grausMax ? 'grau' : 'faixa';
+}
+function transicaoNecessaria(aluno){
+  const idade = idadeDe(aluno.nascimento);
+  const f = FAIXAS_IBJJF[aluno.faixa];
+  if(!f || f.grupo!=='infantil' || idade==null || idade<16) return null;
+  return { para: aluno.faixa==='Branca' ? 'Branca' : 'Azul', motivo:'O aluno completou 16 anos: entrada obrigatória no sistema adulto IBJJF.' };
+}
+function validarGraduacao(aluno, novaFaixa){
+  const idade = idadeDe(aluno.nascimento);
+  const atual = FAIXAS_IBJJF[aluno.faixa];
+  const nova  = FAIXAS_IBJJF[novaFaixa];
+  const erros = [];
+  if(!atual || !nova) return { ok:false, erros:['Faixa inválida.'] };
+  const transicao = atual.grupo==='infantil' && idade!=null && idade>=16 && (novaFaixa==='Azul' || novaFaixa===aluno.faixa);
+  if(!transicao && nova.ordem !== atual.ordem + 1){
+    erros.push('A promoção deve ser para a faixa imediatamente seguinte: '+(faixaPorOrdem(atual.ordem+1)||'(nenhuma)')+'.');
+  }
+  if(idade!=null){
+    if(idade < nova.min) erros.push('Idade mínima para '+novaFaixa+' é '+nova.min+' anos. O aluno tem '+idade+'.');
+    if(nova.grupo==='infantil' && nova.max!=null && idade > nova.max) erros.push('Faixa infantil vale até '+nova.max+' anos. Aos 16 o aluno entra no sistema adulto.');
+    if(nova.grupo==='infantil' && idade>=16) erros.push('Não é possível conceder faixa infantil a praticante com 16 anos ou mais.');
+    if(nova.grupo==='adulto' && idade<16) erros.push('Faixas adultas exigem idade mínima de 16 anos.');
+  }
+  return { ok: erros.length===0, erros };
 }
 
 /* ============ NAVEGAÇÃO / PERMISSÕES ============ */
@@ -646,12 +712,8 @@ const MENU = {
     {g:'Financeiro', itens:[
       {id:'financeiro',label:'Financeiro (leitura)',icon:'financeiro'}
     ]},
-    {g:'Comunicação', itens:[
-      {id:'avisos',label:'Avisos',icon:'avisos'}
-    ]},
-    {g:'Sistema', itens:[
-      {id:'perfil',label:'Meu Perfil',icon:'perfil'}
-    ]}
+    {g:'Comunicação', itens:[{id:'avisos',label:'Avisos',icon:'avisos'}]},
+    {g:'Sistema', itens:[{id:'perfil',label:'Meu Perfil',icon:'perfil'}]}
   ],
   Aluno:[
     {g:'Principal', itens:[{id:'dashboard',label:'Dashboard',icon:'dashboard'}]},
@@ -665,9 +727,7 @@ const MENU = {
       {id:'parceiros',label:'Parceiros',icon:'parceiros'},
       {id:'avisos',label:'Avisos',icon:'avisos'}
     ]},
-    {g:'Conta', itens:[
-      {id:'perfil',label:'Meu Perfil',icon:'perfil'}
-    ]}
+    {g:'Conta', itens:[{id:'perfil',label:'Meu Perfil',icon:'perfil'}]}
   ]
 };
 MENU['Professor Líder'] = MENU.ADM;
@@ -697,7 +757,7 @@ function renderNav(){
         const unread = (DB.get('avisos')||[]).filter(a=>!a.lidos.includes(currentAlunoId())).length;
         if(unread>0) badge = '<span class="badge">'+unread+'</span>';
       }
-      html += '<button class="nav-item'+(current.view===it.id?' active':'')+'" data-view="'+it.id+'" onclick="go(\''+it.id+'\')">'+icon(it.icon)+'<span>'+esc(it.label)+'</span>'+badge+'</button>';
+      html += '<button class="nav-item'+(current.view===it.id?' active':'')+'" onclick="go(\''+it.id+'\')">'+icon(it.icon)+'<span>'+esc(it.label)+'</span>'+badge+'</button>';
     });
   });
   nav.innerHTML = html;
@@ -740,7 +800,7 @@ function go(view){
 }
 function setTitle(t, sub){ document.getElementById('pageTitle').textContent = t; document.getElementById('pageSub').textContent = sub||''; }
 
-/* ============ SELEÇÃO DE DEPENDENTE ============ */
+/* ============ DEPENDENTE ATIVO ============ */
 function currentAlunoId(){
   const s = Session.get();
   if(s.perfil!=='Aluno') return null;
@@ -772,7 +832,7 @@ function setDep(id){
   go(current.view);
 }
 
-/* ============ AUTENTICAÇÃO ============ */
+/* ============ AUTENTICAÇÃO (corrigida - re-semeadura forçada) ============ */
 function doLogin(){
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
@@ -793,7 +853,7 @@ function doLogin(){
     if(al) user = users.find(x=>x.alunoId===al.id);
   }
   if(!user || user.senha!==p){
-    err.innerHTML = '<div class="alert alert-danger" style="margin-top:12px">'+icon('warn')+'<div>Usuário ou senha inválidos.</div></div>';
+    err.innerHTML = '<div class="alert alert-danger" style="margin-top:12px">'+icon('warn')+'<div>Usuário ou senha inválidos. Confira as contas demo abaixo ou clique em "Restaurar dados de demonstração".</div></div>';
     return;
   }
   if(user.ativo===false){
@@ -855,37 +915,29 @@ function todasCobrancas(){
   const lista = [];
   mensalidades.forEach(m=>{
     const a = alunos.find(x=>x.id===m.alunoId);
-    lista.push({
-      id:'m_'+m.id, tipo:'mensalidade', alunoId:m.alunoId, aluno:a?a.nome:'-',
+    lista.push({ id:'m_'+m.id, tipo:'mensalidade', alunoId:m.alunoId, aluno:a?a.nome:'-',
       descricao:'Mensalidade '+m.mes, valor:m.valor, status:m.status,
-      referencia:m.mes, vencimento:ultimoDiaDoMes(m.mes)
-    });
+      referencia:m.mes, vencimento:ultimoDiaDoMes(m.mes) });
   });
   pedidos.forEach(p=>{
     const a = alunos.find(x=>x.id===p.alunoId);
     const pago = p.status==='pago'||p.status==='entregue'||p.status==='enviado';
-    lista.push({
-      id:'p_'+p.id, tipo:'loja', alunoId:p.alunoId, aluno:a?a.nome:'-',
+    lista.push({ id:'p_'+p.id, tipo:'loja', alunoId:p.alunoId, aluno:a?a.nome:'-',
       descricao:'Compra na loja #'+String(p.id).slice(-5).toUpperCase(), valor:p.total,
-      status: pago?'pago':'aberto', referencia:p.data, vencimento:p.data
-    });
+      status: pago?'pago':'aberto', referencia:p.data, vencimento:p.data });
   });
-  bilhetes.filter(b=>b.alunoId).forEach(b=>{
+  bilhetes.filter(b=>b.alunoId && (b.pago || b.reservado)).forEach(b=>{
     const r = rifas.find(x=>x.id===b.rifaId);
     const a = alunos.find(x=>x.id===b.alunoId);
-    if(r) lista.push({
-      id:'b_'+b.id, tipo:'rifa', alunoId:b.alunoId, aluno:a?a.nome:'-',
+    if(r) lista.push({ id:'b_'+b.id, tipo:'rifa', alunoId:b.alunoId, aluno:a?a.nome:'-',
       descricao:'Cota rifa '+r.titulo+' (nº '+b.numero+')', valor:r.preco,
-      status: b.pago?'pago':'aberto', referencia:r.criadoEm, vencimento:r.criadoEm
-    });
+      status: b.pago?'pago':'aberto', referencia:(b.reservadoEm||r.criadoEm), vencimento:(b.reservadoEm||r.criadoEm) });
   });
   cobrancas.forEach(c=>{
     const a = alunos.find(x=>x.id===c.alunoId);
-    lista.push({
-      id:'c_'+c.id, tipo:'avulsa', alunoId:c.alunoId, aluno:a?a.nome:'-',
+    lista.push({ id:'c_'+c.id, tipo:'avulsa', alunoId:c.alunoId, aluno:a?a.nome:'-',
       descricao:c.descricao, valor:c.valor, status:c.status,
-      referencia:c.vencimento, vencimento:c.vencimento
-    });
+      referencia:c.vencimento, vencimento:c.vencimento });
   });
   return lista;
 }
@@ -918,8 +970,6 @@ function situacaoFinanceiraAluno(alunoId){
   const proxima = abertas.slice().sort((a,b)=>String(a.vencimento||'').localeCompare(String(b.vencimento||'')))[0];
   return {totalAberto, pago, inad:vencidas.length>0, vencidas, proxima, abertas:abertas.length};
 }
-
-/* ============ PIX ============ */
 function pixBar(){
   const chave = (DB.get('config')||{}).pixKey||'';
   if(!chave) return '';
@@ -939,8 +989,6 @@ function fallbackCopy(t){
   try{ document.execCommand('copy'); }catch(e){}
   ta.remove();
 }
-
-/* ============ NOTIFICAÇÃO DE COBRANÇAS VENCIDAS ============ */
 function notifVencidas(alunoId){
   let cobrancas = todasCobrancas();
   if(alunoId) cobrancas = cobrancas.filter(c=>c.alunoId===alunoId);
@@ -952,9 +1000,7 @@ function notifVencidas(alunoId){
   return '<div class="alert alert-danger" style="align-items:center">'+icon('warn')+'<div style="flex:1"><b>'+vencidas.length+' cobrança(s) vencida(s)</b> totalizando '+money(total)+'.<div style="margin-top:6px">'+rows+extra+'</div></div><button class="btn btn-gold btn-sm" onclick="go(\'financeiro\')">'+icon('financeiro',13)+' Ver Financeiro</button></div>';
 }
 
-/* ============================================================
-   FINANCEIRO - ROTEAMENTO POR PERFIL (corrigido)
-   ============================================================ */
+/* ============ FINANCEIRO - roteamento por perfil ============ */
 function renderFinanceiro(){
   const s = Session.get();
   if(!s) return;
@@ -962,8 +1008,6 @@ function renderFinanceiro(){
   if(s.perfil==='Professor') return renderFinanceiroProfessor();
   return renderFinanceiroGestao();
 }
-
-/* ---------- ADM / Professor Líder: gestão completa ---------- */
 function renderFinanceiroGestao(){
   setTitle('Financeiro','Gestão de cobranças e pagamentos');
   const cfg = DB.get('config')||{};
@@ -971,7 +1015,7 @@ function renderFinanceiroGestao(){
   const abertas = cobrancas.filter(c=>c.status!=='pago' && c.status!=='isento');
   const totalAberto = abertas.reduce((x,c)=>x+c.valor,0);
   const totalPagoMes = cobrancas.filter(c=>c.status==='pago' && (c.referencia||'').startsWith(hojeISO().slice(0,7))).reduce((x,c)=>x+c.valor,0);
-  const vencidas = abertas.filter(c=>statusCobranca(c).key==='vencido').reduce((x,c)=>x+c.valor,0);
+  const vencidas = abertas.filter(cobrancaVencida).reduce((x,c)=>x+c.valor,0);
   const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer').reduce((x,c)=>x+c.valor,0);
   let html = '';
   html += '<div class="card"><h3>'+icon('financeiro')+'Chave Pix</h3><div class="row"><div class="field" style="max-width:420px"><label>Chave Pix (recebe mensalidades, loja, rifas e cobranças)</label><input id="pixChave" value="'+esc(cfg.pixKey||'')+'" placeholder="ex.: pix@academia.com.br"></div><div style="align-self:flex-end"><button class="btn btn-primary" onclick="salvarPix()">'+icon('check')+' Salvar chave</button></div></div></div>';
@@ -1084,11 +1128,13 @@ function modalEditarStatus(id){
 }
 function setStatusCobranca(id, novo){
   if(!isFull()) return;
-  const [prefix, realId] = id.split('_');
+  const partes = String(id).split('_');
+  const prefix = partes[0];
+  const realId = partes.slice(1).join('_');
   if(prefix==='m'){
     const ms = DB.get('mensalidades')||[];
     const m = ms.find(x=>x.id===realId);
-    if(m){ m.status = novo==='pago'?'pago':'aberto'; if(novo==='pago') m.dataPag=hojeISO(); else m.dataPag=null; DB.set('mensalidades', ms); }
+    if(m){ m.status = novo==='pago'?'pago':'aberto'; m.dataPag = novo==='pago'?hojeISO():null; DB.set('mensalidades', ms); }
   } else if(prefix==='p'){
     const pedidos = DB.get('pedidos')||[];
     const p = pedidos.find(x=>x.id===realId);
@@ -1096,7 +1142,7 @@ function setStatusCobranca(id, novo){
   } else if(prefix==='b'){
     const bilhetes = DB.get('bilhetes')||[];
     const b = bilhetes.find(x=>x.id===realId);
-    if(b){ b.pago = novo==='pago'; DB.set('bilhetes', bilhetes); }
+    if(b){ b.reservado = true; b.pago = novo==='pago'; DB.set('bilhetes', bilhetes); }
   } else if(prefix==='c'){
     const cob = DB.get('cobrancas')||[];
     const c = cob.find(x=>x.id===realId);
@@ -1130,8 +1176,6 @@ function salvarPix(){
   toast('Chave Pix salva.','ok');
   renderFinanceiro();
 }
-
-/* ---------- Professor: situação dos alunos (somente leitura) ---------- */
 function renderFinanceiroProfessor(){
   setTitle('Financeiro','Situação financeira dos alunos');
   const alunos = DB.get('alunos')||[];
@@ -1165,8 +1209,6 @@ function renderFinanceiroProfessor(){
   html += '</tbody></table></div></div>';
   document.getElementById('content').innerHTML = html;
 }
-
-/* ---------- Aluno: histórico + situação das cobranças ---------- */
 function renderFinanceiroAluno(){
   const al = alunoAtual();
   if(!al){ document.getElementById('content').innerHTML='<div class="alert alert-warn">'+icon('warn')+'<div>Aluno não encontrado.</div></div>'; return; }
@@ -1186,7 +1228,6 @@ function renderFinanceiroAluno(){
   html += statCard('Vencido', money(vencidas.reduce((s,c)=>s+c.valor,0)), 'danger', '#e94560');
   html += statCard('À Vencer', money(avencer.reduce((s,c)=>s+c.valor,0)), 'calendar', '#3498db');
   html += '</div>';
-
   html += '<div class="card"><h3>'+icon('calendar')+'Próximos Pagamentos</h3>';
   if(!proximas.length) html += '<p style="color:var(--muted);font-size:13px">Nenhum pagamento à vencer. Você está em dia.</p>';
   else{
@@ -1198,7 +1239,6 @@ function renderFinanceiroAluno(){
     html += '</tbody></table></div>';
   }
   html += '</div>';
-
   html += '<div class="card"><h3>'+icon('financeiro')+'Histórico de Pagamentos e Cobranças</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>';
   if(!cobrancas.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma cobrança registrada.</td></tr>';
   cobrancas.sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||''))).forEach(c=>{
@@ -1271,7 +1311,7 @@ function ultimosAlunosHtml(alunos){
   return html;
 }
 function renderDashboardProfessor(){
-  setTitle('Dashboard do Professor','Visão operacional');
+  setTitle('Dashboard do Professor','Próximas aulas, agendamentos e frequência');
   const alunos = DB.get('alunos')||[];
   const turmas = DB.get('turmas')||[];
   const presencas = DB.get('presencas')||[];
@@ -1379,20 +1419,15 @@ function renderDashboardAluno(){
       html += '<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--card2)">';
       html += '<span class="belt-bar" style="width:10px;height:40px;border-radius:3px;background:'+(t.cor||'#e94560')+'"></span>';
       html += '<div style="flex:1"><b>'+esc(t.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(prof?prof.nome:'-')+' • '+esc(t.hora)+' • '+agsTurma.length+'/'+t.vagas+' vagas</div></div>';
-      if(meuAg){
-        html += '<button class="btn btn-ok btn-sm" onclick="cancelarAgendamento(\''+meuAg.id+'\')">'+icon('check')+' Agendado</button>';
-      } else if(lotada){
-        html += '<button class="btn btn-ghost btn-sm" disabled>Lotada</button>';
-      } else {
-        html += '<button class="btn btn-primary btn-sm" onclick="agendarTurma(\''+t.id+'\')">Agendar</button>';
-      }
+      if(meuAg) html += '<button class="btn btn-ok btn-sm" onclick="cancelarAgendamento(\''+meuAg.id+'\')">'+icon('check')+' Agendado</button>';
+      else if(lotada) html += '<button class="btn btn-ghost btn-sm" disabled>Lotada</button>';
+      else html += '<button class="btn btn-primary btn-sm" onclick="agendarTurma(\''+t.id+'\')">Agendar</button>';
       html += '</div>';
     });
   }
-  html += '</div>';
-  html += '</div>';
+  html += '</div></div>';
   html += '<div class="card"><h3>'+icon('avisos')+'Avisos Recentes</h3>';
-  if(!meusAvisos.length){ html += '<p style="color:var(--muted);font-size:13px">Você está em dia com os avisos.</p>'; }
+  if(!meusAvisos.length) html += '<p style="color:var(--muted);font-size:13px">Você está em dia com os avisos.</p>';
   else{
     meusAvisos.forEach(a=>{
       html += '<div class="notice unread"><div class="n-head"><span class="tag tag-danger">Nova</span><span class="n-title">'+esc(a.titulo)+'</span><span class="n-date">'+fmtData(a.data)+'</span></div><div class="n-body">'+esc(a.corpo)+'</div></div>';
@@ -1489,6 +1524,7 @@ function modalAluno(id){
   const alunos = DB.get('alunos')||[];
   const a = id? alunos.find(x=>x.id===id) : null;
   const editando = !!a;
+  const opcoesFaixa = FAIXA_ORDEM.map(f=>'<option value="'+f+'"'+(a&&a.faixa===f?' selected':'')+'>'+f+'</option>').join('');
   openModal(
     '<h3>'+(editando?'Editar Aluno':'Novo Aluno')+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'+
     '<div class="avatar-upload"><div class="big" id="alFotoPrev">'+(a&&a.foto?'<img src="'+a.foto+'">':(a?esc(a.nome.charAt(0)):'+'))+'</div><div class="avatar-actions"><button class="btn btn-ghost btn-sm" onclick="uploadFoto(\'alFoto\',\'alFotoPrev\')">'+icon('camera',14)+' Galeria / Câmera</button></div></div>'+
@@ -1499,8 +1535,8 @@ function modalAluno(id){
     '<div class="field"><label>Data de nascimento</label><input type="date" id="alNasc" value="'+esc(a?a.nascimento:'')+'"></div>'+
     '<div class="field"><label>Celular (somente celular)</label><input id="alCel" value="'+esc(a?a.celular:'')+'" placeholder="(XX) XXXXX-XXXX" oninput="this.value=maskCelular(this.value)"></div>'+
     '<div class="field"><label>E-mail</label><input id="alEmail" type="email" value="'+esc(a?a.email:'')+'"></div>'+
-    '<div class="field"><label>Faixa</label><select id="alFaixa">'+Object.keys(FAIXAS_IBJJF).map(f=>'<option value="'+f+'"'+(a&&a.faixa===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'+
-    '<div class="field"><label>Graus</label><select id="alGraus">'+[0,1,2,3,4].map(g=>'<option value="'+g+'"'+(a&&Number(a.graus)===g?' selected':'')+'>'+g+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>Faixa</label><select id="alFaixa">'+opcoesFaixa+'</select></div>'+
+    '<div class="field"><label>Graus</label><select id="alGraus">'+[0,1,2,3,4,5,6].map(g=>'<option value="'+g+'"'+(a&&Number(a.graus)===g?' selected':'')+'>'+g+'</option>').join('')+'</select></div>'+
     '<div class="field"><label>Status</label><select id="alAtivo"><option value="1"'+(a&&a.ativo?' selected':'')+'>Ativo</option><option value="0"'+(a&&!a.ativo?' selected':'')+'>Inativo</option></select></div>'+
     '<div class="field"><label>Nota / Observação</label><input id="alNota" value="'+esc(a?a.nota:'')+'"></div>'+
     '</div>' +
@@ -1541,6 +1577,16 @@ function salvarAluno(id){
   if(!id && !validarCPF(cpf)){ toast('CPF inválido.','warn'); return; }
   if(celular && !celularValido(celular)){ toast('Celular inválido. Use (XX) XXXXX-XXXX, somente celular.','warn'); return; }
   if(!id && alunos.some(a=>a.cpf && a.cpf.replace(/\D/g,'')===cpf)){ toast('CPF já cadastrado no sistema.','danger'); return; }
+  const fInfo = FAIXAS_IBJJF[faixa];
+  const idade = idadeDe(nascimento);
+  if(fInfo && idade!=null){
+    if(fInfo.grupo==='infantil' && idade>=16) toast('Atenção: faixa infantil para aluno com 16 anos ou mais.','warn');
+    if(fInfo.grupo==='adulto' && idade<16) toast('Atenção: faixa adulta com aluno abaixo de 16 anos.','warn');
+    if(fInfo.grupo==='mestre' && idade<fInfo.min) toast('Atenção: faixa de mestre exige '+fInfo.min+' anos.','warn');
+  }
+  if(fInfo && graus > fInfo.grausMax){
+    toast('A faixa '+faixa+' aceita no máximo '+fInfo.grausMax+' grau(s).','warn'); return;
+  }
   if(id){
     const a = alunos.find(x=>x.id===id);
     Object.assign(a, {nome, celular, email, nascimento, faixa, graus, ativo, nota, foto});
@@ -1568,7 +1614,7 @@ function excluirAluno(id){
   renderAlunos();
 }
 
-/* ============ USUÁRIOS (Professor Líder) ============ */
+/* ============ USUÁRIOS ============ */
 function renderUsuarios(){
   if(!isFull()) return;
   setTitle('Usuários','Gerenciar acessos ao sistema');
@@ -1660,9 +1706,7 @@ function renderProfessores(){
   let html = '<div style="margin-bottom:16px;text-align:right"><button class="btn btn-primary" onclick="modalProfessor()">'+icon('plus')+' Novo Professor</button></div>';
   html += '<div class="grid grid-3">';
   profs.forEach(p=>{
-    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
-    +'<div class="avatar" style="width:48px;height:48px;font-size:18px">'+avHtml(p.foto,p.nome)+'</div>'
-    +'<div><b>'+esc(p.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(p.especialidade||'')+'</div></div></div>'
+    html += '<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+avHtml(p.foto,p.nome)+'<div><b>'+esc(p.nome)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(p.especialidade||'')+'</div></div></div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.8">'+icon('users',13)+' '+esc(p.cref||'-')+'<br>'+icon('alunos',13)+' '+esc(p.celular||'-')+'<br>'+icon('perfil',13)+' '+esc(p.email||'-')+'</div>'
     +'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="modalProfessor(\''+p.id+'\')">'+icon('edit',14)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirProfessor(\''+p.id+'\')">'+icon('trash',14)+'</button></div></div>';
   });
@@ -1849,7 +1893,7 @@ function exportarPresencas(turmaId){
     const pr = presencas.find(p=>p.alunoId===a.id && p.turmaId===turmaId && p.data===hoje);
     csv += a.nome+';'+(a.cpf||'')+';'+a.faixa+';'+(pr&&pr.presente?'Sim':'Não')+'\n';
   });
-  downloadCSV(csv, 'presencas_'+turma.nome.replace(/\s+/g,'_')+'_'+hoje+'.csv');
+  downloadCSV(csv, 'presencas_'+(turma?turma.nome.replace(/\s+/g,'_'):'turma')+'_'+hoje+'.csv');
 }
 function downloadCSV(csv, nome){
   const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
@@ -1871,7 +1915,7 @@ function renderTrilha(){
   let lista = alunos.slice();
   if(trilhaFiltro!=='todas') lista = lista.filter(a=>a.faixa===trilhaFiltro);
   if(trilhaSort==='nome') lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  else lista.sort((a,b)=>(FAIXA_ORDEM.indexOf(a.faixa)-FAIXA_ORDEM.indexOf(b.faixa))||a.nome.localeCompare(b.nome,'pt-BR'));
+  else lista.sort((a,b)=>(FAIXAS_IBJJF[a.faixa].ordem-FAIXAS_IBJJF[b.faixa].ordem)||a.nome.localeCompare(b.nome,'pt-BR'));
   let html = '<div class="toolbar-row">'
   +'<div class="field"><label>Ordenar por</label><select onchange="trilhaSort=this.value;renderTrilha()"><option value="nome"'+(trilhaSort==='nome'?' selected':'')+'>Ordem alfabética</option><option value="faixa"'+(trilhaSort==='faixa'?' selected':'')+'>Cor da faixa</option></select></div>'
   +'<div class="field"><label>Filtrar por faixa</label><select onchange="trilhaFiltro=this.value;renderTrilha()"><option value="todas"'+(trilhaFiltro==='todas'?' selected':'')+'>Todas as faixas</option>'+FAIXA_ORDEM.map(f=>'<option value="'+f+'"'+(trilhaFiltro===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'
@@ -1882,57 +1926,67 @@ function renderTrilha(){
     const f = faixaInfo(a);
     const idade = idadeDe(a.nascimento);
     const prox = proximaFaixa(a.faixa, idade);
-    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b></div></td>'
+    const fAtual = FAIXAS_IBJJF[a.faixa]||{grausMax:4};
+    const trans = transicaoNecessaria(a);
+    html += '<tr><td><div style="display:flex;align-items:center;gap:10px">'+avHtml(a.foto,a.nome)+'<b>'+esc(a.nome)+'</b>'+(trans?' <span class="tag tag-warn">transição</span>':'')+'</div></td>'
     +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+f.hex+'"></span>'+esc(a.faixa)+'</span></td>'
-    +'<td>'+f.graus+'</td>'
+    +'<td>'+f.graus+'/'+fAtual.grausMax+'</td>'
     +'<td>'+(idade!=null?idade+' anos':'não informada')+'</td>'
     +'<td><span class="belt-chip"><span class="belt-bar" style="background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+'"></span>'+esc(prox||'-')+'</span></td>'
     +'<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalGraduar(\''+a.id+'\')">'+icon('award',14)+' Graduar</button> <button class="btn btn-ghost btn-sm" onclick="goTrilhaAluno(\''+a.id+'\')">'+icon('eye',14)+' Ver trilha</button></td></tr>';
   });
   html += '</tbody></table></div></div>';
-  html += '<div class="card"><h3>'+icon('trilha')+'Cores das Faixas (IBJJF)</h3><div class="chart-legend">'+FAIXA_ORDEM.map(f=>'<span class="lg"><span class="dot" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span>').join('')+'</div></div>';
+  html += '<div class="card"><h3>'+icon('trilha')+'Trilha de Faixas IBJJF</h3><div class="chart-legend">'+FAIXA_ORDEM.map(f=>'<span class="lg"><span class="dot" style="background:'+FAIXAS_IBJJF[f].hex+'"></span>'+f+'</span>').join('')+'</div><p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">Sistema infantil (4 a 15 anos): cada cor tem três variações (com branca, lisa e com preta). Aos 16 anos o praticante passa ao sistema adulto. Faixas de mestre exigem idade mínima e tempo de faixa preta.</p></div>';
   document.getElementById('content').innerHTML = html;
-}
-function proximaFaixa(faixa, idade){
-  if(FAIXAS_INFANTIS.includes(faixa)){
-    const i = FAIXAS_INFANTIS.indexOf(faixa);
-    if(i<FAIXAS_INFANTIS.length-1) return FAIXAS_INFANTIS[i+1];
-    return idade!=null && idade>=16 ? 'Azul' : null;
-  }
-  const i = FAIXAS_ADULTAS.indexOf(faixa);
-  if(i<FAIXAS_ADULTAS.length-1) return FAIXAS_ADULTAS[i+1];
-  return null;
 }
 function modalGraduar(alunoId){
   const a = (DB.get('alunos')||[]).find(x=>x.id===alunoId);
+  if(!a){ toast('Aluno não encontrado.','warn'); return; }
   const idade = idadeDe(a.nascimento);
-  const prox = proximaFaixa(a.faixa, idade);
-  let aviso = '';
-  if(prox && idade!=null && idade < FAIXAS_IBJJF[prox].min){
-    aviso = '<div class="alert alert-warn">'+icon('warn')+'<div>Idade mínima para a faixa <b>'+prox+'</b> é '+FAIXAS_IBJJF[prox].min+' anos. O aluno tem '+idade+' anos. A graduação não será bloqueada, mas pode confirmar mesmo assim.</div></div>';
+  const opcoes = proximasFaixasValidas(a);
+  const fAtual = FAIXAS_IBJJF[a.faixa]||{grausMax:4};
+  const trans = transicaoNecessaria(a);
+  const grauOk = podeReceberGrau(a);
+  const acao = proximaAcao(a);
+  let avisos = '';
+  if(trans) avisos += '<div class="alert alert-warn">'+icon('warn')+'<div>'+esc(trans.motivo)+' Faixa sugerida: <b>'+trans.para+'</b>.</div></div>';
+  if(opcoes.length){
+    const nova = opcoes[0];
+    const nInfo = FAIXAS_IBJJF[nova];
+    if(idade!=null && nInfo && idade < nInfo.min && !trans){
+      avisos += '<div class="alert alert-warn">'+icon('warn')+'<div>Idade mínima para <b>'+nova+'</b> é '+nInfo.min+' anos. O aluno tem '+idade+'. A graduação não será bloqueada, mas confirme com cautela.</div></div>';
+    }
   }
   openModal('<h3>Graduar - '+esc(a.nome)+'<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
-  +aviso
-  +'<div class="form-grid">'
-  +'<div class="field"><label>Faixa atual</label><input value="'+esc(a.faixa)+'" readonly></div>'
-  +'<div class="field"><label>Nova faixa</label><select id="grFaixa">'+Object.keys(FAIXAS_IBJJF).map(f=>'<option value="'+f+'"'+(prox===f?' selected':'')+'>'+f+'</option>').join('')+'</select></div>'
-  +'<div class="field"><label>Tipo</label><select id="grTipo"><option value="faixa">Promoção de faixa</option><option value="grau">Grau</option></select></div>'
-  +'<div class="field"><label>Observação</label><input id="grObs" placeholder="Examinho, tempo de treino..."></div>'
-  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarGraduacao(\''+alunoId+'\')">Confirmar Graduação</button></div>');
+  + avisos
+  + '<div class="form-grid">'
+  + '<div class="field"><label>Faixa atual</label><input value="'+esc(a.faixa)+' ('+Number(a.graus||0)+'/'+fAtual.grausMax+' graus)" readonly></div>'
+  + '<div class="field"><label>Nova faixa</label><select id="grFaixa">'+(opcoes.length?opcoes.map(f=>'<option value="'+f+'">'+f+'</option>').join(''):'<option value="">sem próxima faixa</option>')+'</select></div>'
+  + '<div class="field"><label>Tipo</label><select id="grTipo"><option value="grau"'+(acao==='grau'?' selected':'')+(grauOk?'':' disabled')+'>Grau ('+(grauOk?'disponível':'limite atingido')+')</option><option value="faixa"'+(acao==='faixa'?' selected':'')+'>Promoção de faixa</option></select></div>'
+  + '<div class="field"><label>Observação</label><input id="grObs" placeholder="Examinho, tempo de treino..."></div>'
+  + '</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarGraduacao(\''+alunoId+'\')">Confirmar</button></div>');
 }
 function salvarGraduacao(alunoId){
   const alunos = DB.get('alunos')||[];
   const trilha = DB.get('trilha')||[];
   const a = alunos.find(x=>x.id===alunoId);
+  if(!a){ toast('Aluno não encontrado.','warn'); return; }
   const nova = document.getElementById('grFaixa').value;
   const tipo = document.getElementById('grTipo').value;
   const obs = document.getElementById('grObs').value.trim();
   const antiga = a.faixa;
   if(tipo==='faixa'){
+    if(!nova){ toast('Nenhuma faixa disponível para promoção.','warn'); return; }
     if(nova===antiga){ toast('Selecione uma faixa diferente.','warn'); return; }
+    const v = validarGraduacao(a, nova);
+    if(!v.ok){
+      v.erros.forEach(e=>toast(e,'danger'));
+      if(CONFIG_GRADUACAO.bloquearIdade) return;
+    }
     trilha.push({id:uid(), alunoId, data:hojeISO(), tipo:'faixa', de:antiga, para:nova, obs});
     a.faixa = nova; a.graus = 0;
   } else {
+    if(!podeReceberGrau(a)){ toast('A faixa '+antiga+' está no limite de graus. Promova para a próxima faixa.','warn'); return; }
     const g = Number(a.graus||0);
     trilha.push({id:uid(), alunoId, data:hojeISO(), tipo:'grau', de:String(g), para:String(g+1), obs});
     a.graus = g+1;
@@ -1944,13 +1998,18 @@ function salvarGraduacao(alunoId){
 }
 function renderTrilhaAluno(){
   const al = alunoAtual();
+  if(!al){ document.getElementById('content').innerHTML='<div class="alert alert-warn">'+icon('warn')+'<div>Aluno não encontrado.</div></div>'; return; }
   setTitle('Minha Graduação','Trilha IBJJF');
   const f = faixaInfo(al);
   const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data));
   const idade = idadeDe(al.nascimento);
   const prox = proximaFaixa(al.faixa, idade);
-  let html = '<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap">'
-  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+f.hex+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(al.faixa)+'</div><div style="color:var(--muted);font-size:13px">'+f.graus+' grau(s)</div></div>'
+  const fAtual = FAIXAS_IBJJF[al.faixa]||{grausMax:4};
+  const trans = transicaoNecessaria(al);
+  let html = '';
+  if(trans) html += '<div class="alert alert-warn">'+icon('warn')+'<div>'+esc(trans.motivo)+'</div></div>';
+  html += '<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap">'
+  +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+f.hex+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(al.faixa)+'</div><div style="color:var(--muted);font-size:13px">'+f.graus+'/'+fAtual.grausMax+' grau(s)</div></div>'
   +'<div style="color:var(--muted)">'+icon('trilha',26)+'</div>'
   +'<div><span class="belt-bar" style="width:60px;height:60px;border-radius:50%;background:'+(prox?FAIXAS_IBJJF[prox].hex:'#888')+';display:inline-block"></span><div style="margin-top:8px;font-weight:800;font-size:18px">'+esc(prox||'-')+'</div><div style="color:var(--muted);font-size:13px">Próxima faixa</div></div>'
   +'</div></div>';
@@ -2052,7 +2111,9 @@ function emitirCertificado(id){
   toast('Certificado emitido.','ok');
 }
 
-/* ============ LOJA ============ */
+/* ============================================================
+   LOJA - produtos, pedidos e rifas
+   ============================================================ */
 let mpTab = 'produtos';
 function renderMarketplace(){
   const s = Session.get();
@@ -2103,6 +2164,31 @@ function mpPedidos(){
   html += '</tbody></table></div></div>';
   return html;
 }
+function listaParticipantesRifa(rifaId){
+  const bilhetes = DB.get('bilhetes')||[];
+  const alunos = DB.get('alunos')||[];
+  return bilhetes
+    .filter(b=>b.rifaId===rifaId && b.alunoId && (b.pago || b.reservado))
+    .map(b=>{
+      const a = alunos.find(x=>x.id===b.alunoId);
+      return {numero:Number(b.numero), nome:a?a.nome:'-', pago:!!b.pago, reservado:!!b.reservado, em:b.reservadoEm||null};
+    })
+    .sort((x,y)=>x.numero-y.numero);
+}
+function listaEscolhasHtml(rifaId){
+  const lista = listaParticipantesRifa(rifaId);
+  let html = '<div class="rifa-list-title">'+icon('users',13)+' Números escolhidos ('+lista.length+')</div>';
+  if(!lista.length){
+    html += '<p style="font-size:12px;color:var(--muted)">Nenhum número escolhido ainda.</p>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Número</th><th>Participante</th><th>Situação</th></tr></thead><tbody>';
+    lista.forEach(l=>{
+      html += '<tr><td><b>'+l.numero+'</b></td><td>'+esc(l.nome)+'</td><td>'+(l.pago?'<span class="tag tag-ok">Pago</span>':'<span class="tag tag-warn">Reservado</span>')+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  return html;
+}
 function mpRifas(){
   const s = Session.get();
   const rifas = DB.get('rifas')||[];
@@ -2121,43 +2207,92 @@ function mpRifas(){
   visiveis.forEach(r=>{
     const bs = bilhetes.filter(b=>b.rifaId===r.id);
     const pagos = bs.filter(b=>b.pago);
-    const meus = bs.filter(b=>b.pago && b.alunoId===currentAlunoId());
+    const reservados = bs.filter(b=>b.reservado && !b.pago);
+    const meus = bs.filter(b=>b.alunoId===currentAlunoId() && currentAlunoId() && (b.pago||b.reservado));
     const vencedor = r.vencedor ? bs.find(b=>b.id===r.vencedor) : null;
     const vencedorAluno = vencedor ? (DB.get('alunos')||[]).find(a=>a.id===vencedor.alunoId) : null;
-    html += '<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<div class="card">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
     html += '<div style="flex:1"><b>'+esc(r.titulo)+'</b><div style="font-size:12px;color:var(--muted)">'+esc(r.premio)+' • Cota: '+money(r.preco)+'</div></div>';
     html += '<span class="tag '+(r.status==='ativa'?'tag-ok':'tag-warn')+'">'+(r.status==='ativa'?'Ativa':'Sorteada')+'</span></div>';
     html += '<div class="raffle-grid" style="margin-bottom:12px">';
     for(let n=1; n<=r.totalBilhetes; n++){
-      const b = bs.find(x=>x.numero===n);
+      const b = bs.find(x=>Number(x.numero)===n);
+      const ocupado = !!(b && (b.pago || b.reservado));
       let cls='raffle-cell';
       let onclick='';
-      if(b && b.pago){
-        cls += ' sold';
-        if(meus.some(m=>m.numero===n)) cls += ' mine';
-        if(vencedor && vencedor.numero===n) cls += ' winner';
+      if(ocupado){
+        cls += b.pago ? ' sold' : ' reserved';
+        if(meus.some(m=>Number(m.numero)===n)) cls += ' mine';
+        if(vencedor && Number(vencedor.numero)===n) cls += ' winner';
       } else if(r.status==='ativa' && s.perfil==='Aluno'){
-        onclick=' onclick="comprarBilhete(\''+r.id+'\','+n+')"';
+        cls += ' free';
+        onclick = ' onclick="confirmarReserva(\''+r.id+'\','+n+')"';
       }
       html += '<div class="'+cls+'"'+onclick+'>'+n+'</div>';
     }
     html += '</div>';
-    html += '<div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center"><span>'+pagos.length+'/'+r.totalBilhetes+' vendidos • Você: '+meus.length+'</span>';
+    html += '<div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '<span>'+pagos.length+' pago(s) • '+reservados.length+' reservado(s) • '+(pagos.length+reservados.length)+'/'+r.totalBilhetes+'</span>';
     if(r.status==='sorteada'){
-      html += '<span class="tag tag-gold">Vencedor: '+esc(vencedorAluno?vencedorAluno.nome:'-')+' (nº '+ (vencedor?vencedor.numero:'-')+')</span>';
+      html += '<span class="tag tag-gold">Vencedor: '+esc(vencedorAluno?vencedorAluno.nome:'-')+' (nº '+(vencedor?vencedor.numero:'-')+')</span>';
     } else if(isFull() && pagos.length>0){
       html += '<button class="btn btn-gold btn-sm" onclick="sortearRifa(\''+r.id+'\')">'+icon('gift',13)+' Sortear</button>';
     }
     html += '</div>';
+    html += listaEscolhasHtml(r.id);
     if(isFull()){
-      html += '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="modalRifa(\''+r.id+'\')">'+icon('edit',13)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirRifa(\''+r.id+'\')">'+icon('trash',13)+' Excluir</button></div>';
+      html += '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="modalRifa(\''+r.id+'\')">'+icon('edit',13)+' Editar</button><button class="btn btn-danger btn-sm" onclick="excluirRifa(\''+r.id+'\')">'+icon('trash',13)+' Excluir</button></div>';
     }
     html += '</div>';
   });
-  if(!visiveis.length) html = '<div class="alert alert-info">'+icon('info')+'<div>Nenhuma rifa disponível.</div></div>';
+  if(!visiveis.length) html += '<div class="alert alert-info">'+icon('info')+'<div>Nenhuma rifa disponível.</div></div>';
   if(isFull()) html += '<div class="card" style="text-align:center"><button class="btn btn-primary" onclick="modalRifa()">'+icon('plus')+' Nova Rifa</button></div>';
   html += '</div>';
   return html;
+}
+function confirmarReserva(rifaId, numero){
+  const r = (DB.get('rifas')||[]).find(x=>x.id===rifaId);
+  if(!r){ toast('Rifa não encontrada.','warn'); return; }
+  if(r.status!=='ativa'){ toast('Esta rifa não está mais ativa.','warn'); return; }
+  const bilhetes = DB.get('bilhetes')||[];
+  const b = bilhetes.find(x=>x.rifaId===rifaId && Number(x.numero)===Number(numero));
+  if(b && (b.pago || b.reservado)){ toast('Este número já foi escolhido.','warn'); return; }
+  const al = alunoAtual();
+  if(!al){ toast('Aluno não encontrado.','warn'); return; }
+  openModal(
+    '<h3>Confirmar escolha do número<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+    + '<div class="alert alert-info">'+icon('info')+'<div><b>'+esc(r.titulo)+'</b><br>Número escolhido: <b>'+numero+'</b><br>Valor da cota: <b>'+money(r.preco)+'</b></div></div>'
+    + '<p style="font-size:13px;color:var(--muted);line-height:1.6">Deseja reservar o número <b>'+numero+'</b> para <b>'+esc(al.nome)+'</b>? Ao confirmar, o número fica indisponível para outras pessoas e a cota entra no seu Financeiro como pendente de pagamento.</p>'
+    + pixBar()
+    + '<div class="modal-actions">'
+    + '<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn btn-primary" onclick="reservarBilhete(\''+rifaId+'\','+numero+')">'+icon('check')+' Confirmar reserva</button>'
+    + '</div>'
+  );
+}
+function reservarBilhete(rifaId, numero){
+  const al = alunoAtual();
+  if(!al){ toast('Aluno não encontrado.','warn'); return; }
+  const rifas = DB.get('rifas')||[];
+  const r = rifas.find(x=>x.id===rifaId);
+  if(!r){ toast('Rifa não encontrada.','warn'); return; }
+  if(r.status!=='ativa'){ closeModal(); toast('Esta rifa não está mais ativa.','warn'); return; }
+  const bilhetes = DB.get('bilhetes')||[];
+  const existente = bilhetes.find(x=>x.rifaId===rifaId && Number(x.numero)===Number(numero));
+  if(existente && (existente.pago || existente.reservado)){ closeModal(); toast('Este número já foi escolhido.','warn'); return; }
+  if(existente){
+    existente.alunoId = al.id;
+    existente.reservado = true;
+    existente.pago = false;
+    existente.reservadoEm = hojeISO();
+  } else {
+    bilhetes.push({id:uid(), rifaId, numero:Number(numero), alunoId:al.id, reservado:true, pago:false, reservadoEm:hojeISO()});
+  }
+  DB.set('bilhetes', bilhetes);
+  closeModal();
+  toast('Número '+numero+' reservado para você! O pagamento aparece no seu Financeiro.','ok');
+  renderMarketplace();
 }
 function adicionarCarrinho(produtoId){
   const al = alunoAtual();
@@ -2237,17 +2372,6 @@ function excluirRifa(id){
   DB.set('rifas', (DB.get('rifas')||[]).filter(r=>r.id!==id));
   DB.set('bilhetes', (DB.get('bilhetes')||[]).filter(b=>b.rifaId!==id));
   toast('Rifa excluída.'); renderMarketplace();
-}
-function comprarBilhete(rifaId, numero){
-  const al = alunoAtual();
-  const bilhetes = DB.get('bilhetes')||[];
-  if(bilhetes.some(b=>b.rifaId===rifaId && b.numero===numero && b.pago)){ toast('Bilhete já vendido.','warn'); return; }
-  const b = bilhetes.find(x=>x.rifaId===rifaId && x.numero===numero && !x.pago);
-  if(b){ b.alunoId=al.id; b.pago=true; }
-  else bilhetes.push({id:uid(), rifaId, numero, alunoId:al.id, pago:true});
-  DB.set('bilhetes', bilhetes);
-  toast('Bilhete '+numero+' comprado!','ok');
-  renderMarketplace();
 }
 function sortearRifa(rifaId){
   if(!isFull()) return;
@@ -2514,7 +2638,7 @@ function renderConfig(){
   +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">'+icon('check')+' Salvar</button></div>'
   +'</div>'
   +'<div class="card"><h3>'+icon('info')+'Sobre o Sistema</h3>'
-  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.5 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
+  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.7 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
   +'<div style="margin-top:14px"><button class="btn btn-danger" onclick="resetDados()">'+icon('trash')+' Restaurar dados de demonstração</button></div>'
   +'</div>';
   document.getElementById('content').innerHTML = html;
