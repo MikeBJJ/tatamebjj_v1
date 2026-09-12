@@ -314,15 +314,17 @@ tbody tr:hover{background:var(--card2)}
 
 <script>
 /* ============================================================
-   TATAME BJJ v3.7 - Sistema de Gestão para Academia de Jiu-Jitsu
+   TATAME BJJ v3.8 - Sistema de Gestão para Academia de Jiu-Jitsu
    Perfis: ADM, Professor Líder, Professor e Aluno (com dependentes)
-   Trilha IBJJF completa + Rifas com lista de escolhas e confirmação
-   Camada de dados: localStorage via objeto DB (v11 - login estável)
+   Novidades: edição de mensalidade (ADM/Líder), comprovante de
+   pagamento (aluno) e tipo de plano (Mensal/Trimestral/Anual/Avulso)
+   Camada de dados: localStorage via objeto DB (v12)
    ============================================================ */
 
-const DB_KEY = 'tatame_bjj_db_v11';
-const SESSION_KEY = 'tatame_bjj_session_v11';
-const DB_VERSION = 11;
+const DB_KEY = 'tatame_bjj_db_v12';
+const SESSION_KEY = 'tatame_bjj_session_v12';
+const DB_VERSION = 12;
+const PLANOS = ['Mensal', 'Trimestral', 'Anual', 'Treino avulso'];
 
 const DB = {
   get(key){
@@ -399,14 +401,14 @@ const DB = {
         {id:'pr12', alunoId:'a1', turmaId:'t2', data:iso(now - 86400000*20), presente:true}
       ],
       mensalidades:[
-        {id:'m1', alunoId:'a1', mes:'2026-08', valor:150, status:'pago', dataPag:iso(now - 86400000*40)},
-        {id:'m2', alunoId:'a1', mes:'2026-09', valor:150, status:'aberto'},
-        {id:'m3', alunoId:'a4', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*2)},
-        {id:'m4', alunoId:'a5', mes:'2026-09', valor:150, status:'aberto'},
-        {id:'m5', alunoId:'a6', mes:'2026-09', valor:150, status:'pago', dataPag:iso(now - 86400000*1)},
-        {id:'m6', alunoId:'a5', mes:'2026-10', valor:150, status:'isento'},
-        {id:'m7', alunoId:'a6', mes:'2026-10', valor:150, status:'aberto'},
-        {id:'m8', alunoId:'a4', mes:'2026-08', valor:150, status:'aberto'}
+        {id:'m1', alunoId:'a1', mes:'2026-08', valor:150, plano:'Mensal', status:'pago', dataPag:iso(now - 86400000*40), comprovante:null},
+        {id:'m2', alunoId:'a1', mes:'2026-09', valor:150, plano:'Mensal', status:'aberto', comprovante:null},
+        {id:'m3', alunoId:'a4', mes:'2026-09', valor:450, plano:'Trimestral', status:'pago', dataPag:iso(now - 86400000*2), comprovante:null},
+        {id:'m4', alunoId:'a5', mes:'2026-09', valor:150, plano:'Mensal', status:'aberto', comprovante:null},
+        {id:'m5', alunoId:'a6', mes:'2026-09', valor:1800, plano:'Anual', status:'pago', dataPag:iso(now - 86400000*1), comprovante:null},
+        {id:'m6', alunoId:'a5', mes:'2026-10', valor:150, plano:'Mensal', status:'isento', comprovante:null},
+        {id:'m7', alunoId:'a6', mes:'2026-10', valor:150, plano:'Mensal', status:'aberto', comprovante:null},
+        {id:'m8', alunoId:'a4', mes:'2026-08', valor:30, plano:'Treino avulso', status:'aberto', comprovante:null}
       ],
       produtos:[
         {id:'prd1', nome:'Kimono Tatame Pro', desc:'Kimono premium 5 oz', preco:349.90, estoque:12, foto:'', ativo:true},
@@ -494,9 +496,6 @@ function cortePeriodo(periodo){
   if(periodo==='todos') return '0000-01-01';
   const dias = periodo==='7d'?7 : periodo==='90d'?90 : 30;
   return isoLocal(new Date(Date.now()-dias*86400000));
-}
-function periodoLabel(periodo){
-  return periodo==='7d'?'Últimos 7 dias': periodo==='90d'?'Últimos 90 dias': periodo==='todos'?'Todo o histórico':'Últimos 30 dias';
 }
 function maskCelular(value){
   let d = String(value||'').replace(/\D/g,'').slice(0,11);
@@ -832,7 +831,7 @@ function setDep(id){
   go(current.view);
 }
 
-/* ============ AUTENTICAÇÃO (corrigida - re-semeadura forçada) ============ */
+/* ============ AUTENTICAÇÃO ============ */
 function doLogin(){
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
@@ -916,7 +915,7 @@ function todasCobrancas(){
   mensalidades.forEach(m=>{
     const a = alunos.find(x=>x.id===m.alunoId);
     lista.push({ id:'m_'+m.id, tipo:'mensalidade', alunoId:m.alunoId, aluno:a?a.nome:'-',
-      descricao:'Mensalidade '+m.mes, valor:m.valor, status:m.status,
+      descricao:'Mensalidade '+m.mes, valor:m.valor, status:m.status, plano:m.plano||'Mensal',
       referencia:m.mes, vencimento:ultimoDiaDoMes(m.mes) });
   });
   pedidos.forEach(p=>{
@@ -1000,6 +999,78 @@ function notifVencidas(alunoId){
   return '<div class="alert alert-danger" style="align-items:center">'+icon('warn')+'<div style="flex:1"><b>'+vencidas.length+' cobrança(s) vencida(s)</b> totalizando '+money(total)+'.<div style="margin-top:6px">'+rows+extra+'</div></div><button class="btn btn-gold btn-sm" onclick="go(\'financeiro\')">'+icon('financeiro',13)+' Ver Financeiro</button></div>';
 }
 
+/* ============================================================
+   MENSALIDADES - edição de valor/plano e comprovante
+   ============================================================ */
+function buildMensalidades(){
+  if(!isFull()) return '';
+  const mensalidades = DB.get('mensalidades')||[];
+  const alunos = DB.get('alunos')||[];
+  let html = '<div class="card"><h3>'+icon('financeiro')+'Mensalidades (valor e plano)</h3><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Referência</th><th>Plano</th><th>Valor</th><th>Status</th><th>Comprovante</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  if(!mensalidades.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Nenhuma mensalidade registrada.</td></tr>';
+  mensalidades.slice().sort((a,b)=>b.mes.localeCompare(a.mes)).forEach(m=>{
+    const a = alunos.find(x=>x.id===m.alunoId);
+    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
+    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
+    html += '<tr><td>'+esc(a?a.nome:'-')+'</td><td>'+esc(m.mes)+'</td><td><span class="tag tag-blue">'+esc(m.plano||'Mensal')+'</span></td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td>';
+    html += '<td>'+(m.comprovante?'<button class="btn btn-ghost btn-sm" onclick="verComprovante(\''+m.id+'\')">'+icon('eye',13)+' Ver</button>':'<span style="color:var(--muted)">—</span>')+'</td>';
+    html += '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="modalEditarMensalidade(\''+m.id+'\')">'+icon('edit',13)+' Editar</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function modalEditarMensalidade(id){
+  const ms = DB.get('mensalidades')||[];
+  const m = ms.find(x=>x.id===id);
+  if(!m){ toast('Mensalidade não encontrada.','warn'); return; }
+  openModal('<h3>Editar Mensalidade<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div class="form-grid">'
+  +'<div class="field full"><label>Referência</label><input value="'+esc(m.mes)+'" readonly></div>'
+  +'<div class="field"><label>Valor (R$) *</label><input id="mmValor" value="'+m.valor+'" inputmode="decimal"></div>'
+  +'<div class="field"><label>Plano</label><select id="mmPlano">'+PLANOS.map(p=>'<option value="'+p+'"'+(m.plano===p?' selected':'')+'>'+p+'</option>').join('')+'</select></div>'
+  +'</div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoMensalidade(\''+id+'\')">Salvar</button></div>');
+}
+function salvarEdicaoMensalidade(id){
+  if(!isFull()) return;
+  const ms = DB.get('mensalidades')||[];
+  const m = ms.find(x=>x.id===id);
+  if(!m){ toast('Mensalidade não encontrada.','warn'); return; }
+  const valor = parseFloat(String(document.getElementById('mmValor').value).replace(',','.'))||0;
+  if(valor<=0){ toast('Informe um valor válido.','warn'); return; }
+  m.valor = valor;
+  m.plano = document.getElementById('mmPlano').value;
+  DB.set('mensalidades', ms);
+  toast('Mensalidade atualizada.','ok');
+  closeModal(); renderFinanceiro();
+}
+function anexarComprovante(mensalidadeId){
+  const al = alunoAtual();
+  if(!al){ toast('Aluno não encontrado.','warn'); return; }
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange = ()=>{
+    const file = inp.files[0];
+    if(!file) return;
+    if(file.size > 5*1024*1024){ toast('Arquivo muito grande (máx. 5MB).','warn'); return; }
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const ms = DB.get('mensalidades')||[];
+      const m = ms.find(x=>x.id===mensalidadeId);
+      if(m){ m.comprovante = e.target.result; DB.set('mensalidades', ms); toast('Comprovante anexado!','ok'); renderFinanceiro(); }
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+function verComprovante(mensalidadeId){
+  const ms = DB.get('mensalidades')||[];
+  const m = ms.find(x=>x.id===mensalidadeId);
+  if(!m || !m.comprovante){ toast('Nenhum comprovante anexado.','warn'); return; }
+  openModal('<h3>Comprovante de Pagamento<button class="modal-close" onclick="closeModal()">'+icon('sair')+'</button></h3>'
+  +'<div style="text-align:center"><img src="'+m.comprovante+'" alt="Comprovante" style="max-width:100%;max-height:60vh;border-radius:10px"></div>'
+  +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>');
+}
+
 /* ============ FINANCEIRO - roteamento por perfil ============ */
 function renderFinanceiro(){
   const s = Session.get();
@@ -1025,6 +1096,7 @@ function renderFinanceiroGestao(){
   html += statCard('Vencido', money(vencidas), 'danger', '#e94560');
   html += statCard('À Vencer', money(avencer), 'calendar', '#3498db');
   html += '</div>';
+  html += buildMensalidades();
   html += buildFinanceiroAlunos();
   html += buildTodasCobrancas();
   html += buildCobrancasAvulsas();
@@ -1220,6 +1292,7 @@ function renderFinanceiroAluno(){
   const vencidas = abertas.filter(cobrancaVencida);
   const avencer = abertas.filter(c=>statusCobranca(c).key==='avencer');
   const proximas = avencer.slice().sort((a,b)=>String(a.vencimento||'').localeCompare(String(b.vencimento||''))).slice(0,5);
+  const minhasMensalidades = (DB.get('mensalidades')||[]).filter(m=>m.alunoId===al.id).sort((a,b)=>b.mes.localeCompare(a.mes));
   let html = pixBar();
   html += notifVencidas(al.id);
   html += '<div class="grid grid-4">';
@@ -1228,6 +1301,21 @@ function renderFinanceiroAluno(){
   html += statCard('Vencido', money(vencidas.reduce((s,c)=>s+c.valor,0)), 'danger', '#e94560');
   html += statCard('À Vencer', money(avencer.reduce((s,c)=>s+c.valor,0)), 'calendar', '#3498db');
   html += '</div>';
+
+  // Minhas mensalidades com comprovante
+  html += '<div class="card"><h3>'+icon('financeiro')+'Minhas Mensalidades</h3><div class="table-wrap"><table><thead><tr><th>Referência</th><th>Plano</th><th>Valor</th><th>Status</th><th>Comprovante</th></tr></thead><tbody>';
+  if(!minhasMensalidades.length) html += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma mensalidade.</td></tr>';
+  minhasMensalidades.forEach(m=>{
+    const st = m.status==='pago'?'tag-ok':(m.status==='isento'?'tag-gold':'tag-danger');
+    const lbl = m.status==='pago'?'Pago':(m.status==='isento'?'Isento':'Em aberto');
+    html += '<tr><td>'+esc(m.mes)+'</td><td><span class="tag tag-blue">'+esc(m.plano||'Mensal')+'</span></td><td>'+money(m.valor)+'</td><td><span class="tag '+st+'">'+lbl+'</span></td><td>';
+    if(m.comprovante) html += '<button class="btn btn-ghost btn-sm" onclick="verComprovante(\''+m.id+'\')">'+icon('eye',13)+' Ver</button> ';
+    if(m.status==='aberto') html += '<button class="btn btn-gold btn-sm" onclick="anexarComprovante(\''+m.id+'\')">'+icon('image',13)+' Anexar comprovante</button>';
+    else if(m.status === 'pago' && !m.comprovante) html += '<span style="color:var(--muted);font-size:12px">pago</span>';
+    html += '</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
   html += '<div class="card"><h3>'+icon('calendar')+'Próximos Pagamentos</h3>';
   if(!proximas.length) html += '<p style="color:var(--muted);font-size:13px">Nenhum pagamento à vencer. Você está em dia.</p>';
   else{
@@ -1999,7 +2087,7 @@ function salvarGraduacao(alunoId){
 function renderTrilhaAluno(){
   const al = alunoAtual();
   if(!al){ document.getElementById('content').innerHTML='<div class="alert alert-warn">'+icon('warn')+'<div>Aluno não encontrado.</div></div>'; return; }
-  setTitle('Minha Graduação','Trilha IBJJF');
+  setTitle('Minha Graduação','Três IBJJF');
   const f = faixaInfo(al);
   const trilha = (DB.get('trilha')||[]).filter(t=>t.alunoId===al.id).sort((a,b)=>b.data.localeCompare(a.data));
   const idade = idadeDe(al.nascimento);
@@ -2300,7 +2388,7 @@ function adicionarCarrinho(produtoId){
   const p = produtos.find(x=>x.id===produtoId);
   if(!p || p.estoque<=0){ toast('Produto sem estoque.','warn'); return; }
   const pedidos = DB.get('pedidos')||[];
-  pedidos.push({id:uid(), alunoId:al.id, itens:[{produtoId, qtd:1, preco:p.preco}], total:p.preco, status:'pendente', data:hojeISO()});
+  pedidos.push({id:uid(), aluno:al.id, itens:[{produtoId, qtd:1, preco:p.preco}], total:p.preco, status:'pendente', data:hojeISO()});
   p.estoque -= 1;
   DB.set('produtos', produtos);
   DB.set('pedidos', pedidos);
@@ -2351,7 +2439,7 @@ function modalRifa(id){
 function salvarRifa(id){
   const rifas = DB.get('rifas')||[];
   const titulo = document.getElementById('rfTitulo').value.trim();
-  if(!titulo){ toast('Informe o título.','warn'); return; }
+  if(!titulo){ toast('Informe o nome.','warn'); return; }
   const preco = parseFloat(String(document.getElementById('rfPreco').value).replace(',','.'))||0;
   const total = Number(document.getElementById('rfTotal').value)||100;
   if(id){
@@ -2638,7 +2726,7 @@ function renderConfig(){
   +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">'+icon('check')+' Salvar</button></div>'
   +'</div>'
   +'<div class="card"><h3>'+icon('info')+'Sobre o Sistema</h3>'
-  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.7 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
+  +'<p style="font-size:13px;color:var(--muted);line-height:1.7">Tatame BJJ v3.8 - Sistema de Gestão para Academia de Jiu-Jitsu.<br>Perfis: Administrador, Professor Líder, Professor e Aluno (com dependentes).<br>Dados armazenados localmente neste navegador (localStorage).</p>'
   +'<div style="margin-top:14px"><button class="btn btn-danger" onclick="resetDados()">'+icon('trash')+' Restaurar dados de demonstração</button></div>'
   +'</div>';
   document.getElementById('content').innerHTML = html;
