@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Backend para Gestão de Academia de BJJ",
   "main": "dist/server.js",
-  "scripts": {
+  "scripts": {"postinstall": "prisma db push",
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
